@@ -586,9 +586,10 @@ function abRenderQuestions() {
     edit.value = '';
     return;
   }
-  list.innerHTML = qs.map(q =>
-    `<button class="ab-q-btn" onclick="abRunQuestion(this,${JSON.stringify(q)})">${q}</button>`
-  ).join('');
+  list.innerHTML = qs.map(q => {
+    const escaped = q.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    return `<button class="ab-q-btn" data-question="${escaped}" onclick="abRunQuestion(this, this.dataset.question)">${q}</button>`;
+  }).join('');
   edit.value = qs.join('\n');
 }
 
