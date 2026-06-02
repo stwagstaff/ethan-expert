@@ -567,30 +567,108 @@
 #adminPanel {
   background: #fff;
   border-radius: 8px;
-  padding: 2rem;
-  width: min(700px, 95vw);
+  width: min(680px, 95vw);
   max-height: 90vh;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
-#adminPanel h2 { font-size: 1.2rem; color: var(--ink); margin: 0; }
-#adminPanel label { font-size: 0.8rem; font-weight: 600; color: var(--ink-muted); display: block; margin-bottom: 0.25rem; }
-#adminPanel input[type=password], #adminPanel input[type=text], #adminPanel textarea {
-  width: 100%; border: 1px solid var(--border); border-radius: 4px;
-  padding: 0.5rem 0.65rem; font-size: 0.9rem; font-family: inherit;
+#adminHeader {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
 }
-#adminPanel textarea { resize: vertical; font-family: var(--font-mono); font-size: 0.8rem; }
-#adminPanel .admin-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-#adminPanel .admin-row button {
-  padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;
-  font-size: 0.9rem; font-weight: 600;
+#adminHeader h2 { font-size: 1rem; font-weight: 600; color: var(--ink); margin: 0; }
+#adminHeader button {
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-muted); font-size: 1.2rem; line-height: 1;
 }
-.admin-btn-primary { background: var(--accent); color: #fff; }
-.admin-btn-secondary { background: var(--surface-2); color: var(--ink); }
-#adminStatus { font-size: 0.85rem; color: var(--ink-muted); min-height: 1.2em; }
-#adminFields { display: none; flex-direction: column; gap: 1rem; }
+#adminLogin {
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+#adminLogin label { font-size: 0.8rem; font-weight: 600; color: var(--ink-muted); }
+#adminLogin input {
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.6rem 0.75rem; font-size: 0.95rem; width: 100%;
+}
+#adminLogin button {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 4px; padding: 0.6rem 1.25rem;
+  font-size: 0.9rem; font-weight: 600; cursor: pointer; align-self: flex-start;
+}
+#adminLoginErr { font-size: 0.85rem; color: #c0392b; min-height: 1em; }
+#adminChatWrap { display: none; flex-direction: column; flex: 1; min-height: 0; }
+#adminMessages {
+  flex: 1; overflow-y: auto;
+  padding: 1rem 1.5rem;
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+.admin-msg {
+  max-width: 90%;
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.admin-msg.bot {
+  align-self: flex-start;
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.admin-msg.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+}
+.admin-msg.system-note {
+  align-self: center;
+  background: none;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  font-style: italic;
+}
+#adminTyping {
+  display: none;
+  align-self: flex-start;
+  padding: 0.5rem 0.9rem;
+  background: var(--surface-2);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+#adminInputRow {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#adminInput {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: none;
+  height: 42px;
+  max-height: 120px;
+}
+#adminSendBtn {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 6px;
+  padding: 0 1rem; font-size: 0.9rem;
+  font-weight: 600; cursor: pointer; flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -1477,79 +1555,129 @@ async function testAPI() {
 }
 
 // ══════════════════════════════════════════════
-// ADMIN PANEL
+// ADMIN — CONVERSATIONAL PANEL
 // ══════════════════════════════════════════════
-const PROXY = 'https://ethan-expert-proxy.threedwag.workers.dev';
+const ADMIN_PROXY = 'https://ethan-expert-proxy.threedwag.workers.dev';
+let adminPassword = '';
+let adminHistory = []; // {role, content} for the admin chat
 
 function openAdmin() {
   document.getElementById('adminOverlay').style.display = 'flex';
+  // If already logged in this session, go straight to chat
+  if (adminPassword) showAdminChat();
 }
+
 function closeAdmin() {
   document.getElementById('adminOverlay').style.display = 'none';
 }
 
-async function adminLoad() {
+async function adminLogin() {
   const pw = document.getElementById('adminPw').value.trim();
-  if (!pw) return alert('Enter the admin password first.');
-  const statusEl = document.getElementById('adminStatus');
-  statusEl.textContent = 'Loading…';
-  try {
-    const res = await fetch(`${PROXY}/admin`, { headers: { 'Admin-Password': pw } });
-    if (res.status === 401) { statusEl.textContent = '✗ Wrong password.'; return; }
-    const { config } = await res.json();
-    document.getElementById('adminSystemPrompt').value = config.system_prompt || SYSTEM_PROMPT;
-    document.getElementById('adminTagline').value      = config.tagline  || document.querySelector('.masthead-label').textContent;
-    document.getElementById('adminSubtitle').value     = config.subtitle || document.querySelector('.masthead-sub').textContent;
-    document.getElementById('adminWelcome').value      = config.welcome_message || '';
-    if (config.quick_questions && typeof config.quick_questions === 'object' && !Array.isArray(config.quick_questions)) {
-      document.getElementById('adminQuickQ').value = Object.entries(config.quick_questions)
-        .map(([mode, qs]) => `[${mode}]\n${qs.join('\n')}`).join('\n\n');
-    } else {
-      document.getElementById('adminQuickQ').value = Object.entries(QUICK_QUESTIONS)
-        .map(([mode, qs]) => `[${mode}]\n${qs.join('\n')}`).join('\n\n');
-    }
-    document.getElementById('adminFields').style.display = 'block';
-    statusEl.textContent = '✓ Loaded — edit below and hit Save.';
-    sessionStorage.setItem('adminPw', pw);
-  } catch (e) { statusEl.textContent = '✗ Error: ' + e.message; }
-}
+  const errEl = document.getElementById('adminLoginErr');
+  if (!pw) { errEl.textContent = 'Enter the password.'; return; }
 
-async function adminSave() {
-  const pw = sessionStorage.getItem('adminPw') || document.getElementById('adminPw').value.trim();
-  const statusEl = document.getElementById('adminStatus');
-  statusEl.textContent = 'Saving…';
-  const rawQQ = document.getElementById('adminQuickQ').value.trim();
-  let quick_questions = {};
-  rawQQ.split(/\n(?=\[)/).forEach(block => {
-    const m = block.match(/^\[(\w+)\]\n([\s\S]+)/);
-    if (m) quick_questions[m[1]] = m[2].split('\n').map(s => s.trim()).filter(Boolean);
-  });
-  const payload = {
-    system_prompt:   document.getElementById('adminSystemPrompt').value.trim(),
-    tagline:         document.getElementById('adminTagline').value.trim(),
-    subtitle:        document.getElementById('adminSubtitle').value.trim(),
-    welcome_message: document.getElementById('adminWelcome').value.trim(),
-    quick_questions,
-  };
+  errEl.textContent = 'Checking…';
   try {
-    const res = await fetch(`${PROXY}/admin`, {
+    const res = await fetch(`${ADMIN_PROXY}/admin/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Admin-Password': pw },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] }),
     });
-    if (res.status === 401) { statusEl.textContent = '✗ Wrong password.'; return; }
+    if (res.status === 401) { errEl.textContent = 'Wrong password.'; return; }
     const data = await res.json();
-    if (data.ok) {
-      statusEl.textContent = '✓ Saved! Changes are live immediately.';
-      applyConfig(payload);
-    } else { statusEl.textContent = '✗ ' + data.error; }
-  } catch (e) { statusEl.textContent = '✗ Error: ' + e.message; }
+    adminPassword = pw;
+    showAdminChat();
+    adminAddMsg('bot', data.reply || 'Hello! What would you like to change?');
+  } catch (e) {
+    errEl.textContent = 'Connection error: ' + e.message;
+  }
 }
 
-function applyConfig(config) {
-  if (config.system_prompt) window._SYSTEM_PROMPT_LIVE = config.system_prompt;
-  if (config.tagline)  document.querySelector('.masthead-label').textContent = config.tagline;
-  if (config.subtitle) document.querySelector('.masthead-sub').textContent   = config.subtitle;
+function showAdminChat() {
+  document.getElementById('adminLogin').style.display = 'none';
+  document.getElementById('adminChatWrap').style.display = 'flex';
+  document.getElementById('adminInput').focus();
+}
+
+function adminAddMsg(role, text) {
+  const msgs = document.getElementById('adminMessages');
+  const typing = document.getElementById('adminTyping');
+  const div = document.createElement('div');
+  div.className = 'admin-msg ' + role;
+  div.textContent = text;
+  msgs.insertBefore(div, typing);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function adminAddNote(text) {
+  const msgs = document.getElementById('adminMessages');
+  const typing = document.getElementById('adminTyping');
+  const div = document.createElement('div');
+  div.className = 'admin-msg system-note';
+  div.textContent = text;
+  msgs.insertBefore(div, typing);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function adminSend() {
+  const input = document.getElementById('adminInput');
+  const text = input.value.trim();
+  if (!text || !adminPassword) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('adminSendBtn').disabled = true;
+
+  adminAddMsg('user', text);
+  adminHistory.push({ role: 'user', content: text });
+
+  const typing = document.getElementById('adminTyping');
+  typing.style.display = 'block';
+  document.getElementById('adminMessages').scrollTop = 99999;
+
+  try {
+    const res = await fetch(`${ADMIN_PROXY}/admin/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPassword },
+      body: JSON.stringify({ messages: adminHistory }),
+    });
+
+    typing.style.display = 'none';
+
+    if (res.status === 401) {
+      adminAddNote('Session expired — please close and log in again.');
+      adminPassword = '';
+      return;
+    }
+
+    const data = await res.json();
+    const reply = data.reply || 'No response.';
+    adminHistory.push({ role: 'assistant', content: reply });
+    adminAddMsg('bot', reply);
+
+    // If the bot saved config, silently reload it in the main page
+    if (reply.toLowerCase().includes('saved')) {
+      fetch(`${ADMIN_PROXY}/config`)
+        .then(r => r.json())
+        .then(({ config }) => {
+          if (!config) return;
+          if (config.system_prompt) window._SYSTEM_PROMPT_LIVE = config.system_prompt;
+          if (config.tagline)  document.querySelector('.masthead-label').textContent = config.tagline;
+          if (config.subtitle) document.querySelector('.masthead-sub').textContent   = config.subtitle;
+          if (config.quick_questions && typeof config.quick_questions === 'object') {
+            Object.assign(QUICK_QUESTIONS, config.quick_questions);
+            renderQuickQuestions();
+          }
+        })
+        .catch(() => {});
+    }
+  } catch (e) {
+    typing.style.display = 'none';
+    adminAddNote('Error: ' + e.message);
+  } finally {
+    document.getElementById('adminSendBtn').disabled = false;
+    document.getElementById('adminInput').focus();
+  }
 }
 
 // Start
@@ -1558,41 +1686,30 @@ init();
 <!-- ADMIN OVERLAY -->
 <div id="adminOverlay">
   <div id="adminPanel">
-    <h2>🔐 EthanExpert Admin</h2>
-    <div>
-      <label>Admin Password</label>
-      <input type="password" id="adminPw" placeholder="Enter password…" autocomplete="off">
+    <div id="adminHeader">
+      <h2>🔐 EthanExpert Site Editor</h2>
+      <button onclick="closeAdmin()" title="Close">✕</button>
     </div>
-    <div class="admin-row">
-      <button class="admin-btn-primary" onclick="adminLoad()">Load Current Config</button>
-      <button class="admin-btn-secondary" onclick="closeAdmin()">Cancel</button>
-    </div>
-    <div id="adminStatus"></div>
 
-    <div id="adminFields">
-      <div>
-        <label>Tagline (small text above name)</label>
-        <input type="text" id="adminTagline">
+    <!-- Login screen -->
+    <div id="adminLogin">
+      <label>Admin password</label>
+      <input type="password" id="adminPw" placeholder="Enter password…" autocomplete="off"
+             onkeydown="if(event.key==='Enter') adminLogin()">
+      <button onclick="adminLogin()">Sign in →</button>
+      <div id="adminLoginErr"></div>
+    </div>
+
+    <!-- Chat interface (shown after login) -->
+    <div id="adminChatWrap">
+      <div id="adminMessages">
+        <div id="adminTyping">Thinking…</div>
       </div>
-      <div>
-        <label>Subtitle (under the name)</label>
-        <input type="text" id="adminSubtitle">
-      </div>
-      <div>
-        <label>Welcome message (first bubble when someone opens the chat)</label>
-        <textarea id="adminWelcome" rows="3"></textarea>
-      </div>
-      <div>
-        <label>System Prompt (what Ethan knows and how he behaves)</label>
-        <textarea id="adminSystemPrompt" rows="20"></textarea>
-      </div>
-      <div>
-        <label>Quick Questions — format: [mode] on one line, then one question per line. Modes: curious, publisher, speaker, academic, collaborator, recruiter</label>
-        <textarea id="adminQuickQ" rows="20"></textarea>
-      </div>
-      <div class="admin-row">
-        <button class="admin-btn-primary" onclick="adminSave()">💾 Save All Changes</button>
-        <button class="admin-btn-secondary" onclick="closeAdmin()">Close</button>
+      <div id="adminInputRow">
+        <textarea id="adminInput" placeholder="Tell me what you'd like to change…"
+                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();adminSend()}"
+                  oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+        <button id="adminSendBtn" onclick="adminSend()">Send</button>
       </div>
     </div>
   </div>
