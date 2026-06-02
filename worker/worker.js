@@ -36,7 +36,7 @@ function json(data, status = 200, origin = '') {
   });
 }
 
-const CONFIG_KEYS = ['system_prompt', 'tagline', 'subtitle', 'welcome_message', 'quick_questions', 'ab_questions', 'knowledge_base'];
+const CONFIG_KEYS = ['system_prompt', 'tagline', 'subtitle', 'welcome_message', 'quick_questions', 'ab_questions', 'knowledge_base', 'knowledge_base_pending'];
 
 async function getConfig(env) {
   const result = {};
@@ -92,21 +92,31 @@ Only include fields you are actually changing.`,
     },
   },
   {
-    name: 'get_current_config',
-    description: 'Fetch the current live configuration from the database. Call this at the start of the conversation or whenever you need to refresh what the current values are.',
+    name: 'append_knowledge',
+    description: `Append new facts to the knowledge base pending queue WITHOUT reading the existing KB. Use this for "add", "include", "note that" requests. The text is appended to a small pending document that gets read into every session. Fast — does not require loading the full KB. Confirm with Ethan before appending.`,
     input_schema: {
       type: 'object',
-      properties: {},
+      properties: {
+        text: { type: 'string', description: 'The text to append. Be concise and factual.' },
+      },
+      required: ['text'],
     },
+  },
+  {
+    name: 'promote_knowledge',
+    description: `Merge the pending knowledge additions into the main knowledge base document, then clear the pending queue. Call this when Ethan clicks "Promote" or asks to commit/finalize pending changes. This reconciles the two documents into one.`,
+    input_schema: { type: 'object', properties: {} },
   },
 ];
 
 function buildAdminSystemPrompt(config) {
   return `You are the EthanExpert Site Editor — an intelligent admin assistant that helps Ethan Watters manage and improve his AI-powered expert page at ethan-expert.pages.dev.
 
-You have access to two tools:
-- get_current_config: fetch the current live site configuration
-- save_config: save changes to the live site (always confirm with Ethan before calling this)
+You have access to tools:
+- get_current_config: fetch current config (KB shown as summary only — fast)
+- save_config: save behavior prompt, tagline, subtitle, welcome message, quick questions
+- append_knowledge: add new facts to the pending KB queue WITHOUT reading the full KB (fast)
+- promote_knowledge: merge pending KB additions into the main KB document and clear the queue
 
 YOUR ROLE:
 - Help Ethan tune how his AI representative speaks, what it knows, and how it presents itself
@@ -230,7 +240,39 @@ async function handleAdminChat(request, env, origin) {
 
         if (toolUse.name === 'get_current_config') {
           const config = await getConfig(env);
-          toolResult = JSON.stringify(config, null, 2);
+          // Don't return full KB — just a summary to keep context small
+          const summary = { ...config };
+          if (summary.knowledge_base) summary.knowledge_base = `[${Math.round(summary.knowledge_base.length/1000)}K chars — use append_knowledge to add facts, or promote_knowledge to reconcile]`;
+          toolResult = JSON.stringify(summary, null, 2);
+
+        } else if (toolUse.name === 'append_knowledge') {
+          const text = toolUse.input?.text || '';
+          try {
+            const existing = await env.CONFIG.get('knowledge_base_pending') || '';
+            const newPending = existing
+              ? existing + '\n\n' + text.trim()
+              : text.trim();
+            await env.CONFIG.put('knowledge_base_pending', newPending);
+            toolResult = `Appended to pending knowledge base. Pending now has ${newPending.length} chars. Use promote_knowledge to merge into the main document.`;
+          } catch (e) {
+            toolResult = `Error appending: ${e.message}`;
+          }
+
+        } else if (toolUse.name === 'promote_knowledge') {
+          try {
+            const main    = await env.CONFIG.get('knowledge_base') || '';
+            const pending = await env.CONFIG.get('knowledge_base_pending') || '';
+            if (!pending) {
+              toolResult = 'Nothing pending to promote.';
+            } else {
+              const merged = main + '\n\n--- ADDITIONS (reconciled) ---\n' + pending;
+              await env.CONFIG.put('knowledge_base', merged);
+              await env.CONFIG.put('knowledge_base_pending', '');
+              toolResult = `Promoted. Main KB is now ${merged.length} chars. Pending queue cleared.`;
+            }
+          } catch (e) {
+            toolResult = `Error promoting: ${e.message}`;
+          }
 
         } else if (toolUse.name === 'save_config') {
           const fields = toolUse.input?.fields || {};
@@ -319,15 +361,18 @@ export default {
     catch { return json({ error: 'Invalid JSON' }, 400, origin); }
 
     if (!body.system) {
-      // Concatenate behavior prompt + knowledge base
+      // Concatenate behavior prompt + knowledge base + pending additions
       const behavior  = await env.CONFIG.get('system_prompt');
       const knowledge = await env.CONFIG.get('knowledge_base');
-      if (behavior && knowledge) {
-        body.system = behavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + knowledge;
+      const pending   = await env.CONFIG.get('knowledge_base_pending');
+      let fullKB = knowledge || '';
+      if (pending) fullKB += '\n\n--- RECENT ADDITIONS (pending reconciliation) ---\n' + pending;
+      if (behavior && fullKB) {
+        body.system = behavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + fullKB;
       } else if (behavior) {
         body.system = behavior;
-      } else if (knowledge) {
-        body.system = knowledge;
+      } else if (fullKB) {
+        body.system = fullKB;
       }
     }
 

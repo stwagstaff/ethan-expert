@@ -386,6 +386,131 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
 .ab-load-btn { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border) !important; }
 .ab-promote-btn { background: #27ae60; color: #fff; }
 .ab-promote-btn:hover { background: #219a52; }
+
+/* ── CHAT PAGE — two-column layout ── */
+#chatPage {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  overflow: hidden;
+  height: 100%;
+}
+#chatLeft {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+#chatRight {
+  flex: 0 0 360px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-1);
+}
+#chatPanelTabs {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.cpanel-tab {
+  flex: 1;
+  background: var(--surface-2);
+  border: none;
+  border-right: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.cpanel-tab:last-child { border-right: none; }
+.cpanel-tab.active { background: var(--surface-1); color: var(--accent); border-bottom: 2px solid var(--accent); }
+.cpanel-tab:hover:not(.active) { background: var(--surface-1); color: var(--ink-muted); }
+.cpanel-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cpanel-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+#chatKBSearch {
+  flex: 1;
+  min-width: 80px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.74rem;
+  font-family: var(--font-mono);
+  background: #fff;
+  color: var(--ink);
+}
+#chatKBSearch:focus { outline: 1px solid var(--accent); }
+.cpanel-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.cpanel-btn:hover { background: var(--surface-1); color: var(--ink); }
+.promote-btn { background: #27ae60; color: #fff; border-color: #27ae60; }
+.promote-btn:hover { background: #219a52; color: #fff; }
+.pending-badge {
+  font-size: 0.68rem;
+  color: #e67e22;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.cpanel-text {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.76rem;
+  font-family: var(--font-mono);
+  line-height: 1.55;
+  color: var(--ink-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.cpanel-text mark { background: #fff3a3; color: var(--ink); border-radius: 2px; }
+.cpanel-pending-head {
+  flex-shrink: 0;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e67e22;
+  background: #fff8f0;
+  border-top: 1px solid #f0d9c0;
+  border-bottom: 1px solid #f0d9c0;
+}
+.cpanel-pending-text {
+  background: #fffaf4;
+  flex: 0 1 auto;
+  max-height: 200px;
+  color: var(--ink);
+}
+
 </style>
 </head>
 <body>
@@ -436,16 +561,51 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
       </div>
     </div>
 
-    <!-- CHAT PAGE -->
+    <!-- CHAT PAGE — two-column: chat left, KB+Behavior panel right -->
     <div class="page" id="chatPage">
-      <div id="chatMessages">
-        <div id="chatTyping">Thinking…</div>
+
+      <!-- LEFT: conversation -->
+      <div id="chatLeft">
+        <div id="chatMessages">
+          <div id="chatTyping">Thinking…</div>
+        </div>
+        <div id="chatInputRow">
+          <textarea id="chatInput" placeholder="Tell me what you'd like to change…"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend()}"
+                    oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'"></textarea>
+          <button id="chatSendBtn" onclick="chatSend()">Send</button>
+        </div>
       </div>
-      <div id="chatInputRow">
-        <textarea id="chatInput" placeholder="Tell me what you'd like to change…"
-                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend()}"
-                  oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'"></textarea>
-        <button id="chatSendBtn" onclick="chatSend()">Send</button>
+
+      <!-- RIGHT: tabbed panel -->
+      <div id="chatRight">
+        <div id="chatPanelTabs">
+          <button class="cpanel-tab active" id="tabKB" onclick="chatPanelTab('kb',this)">Knowledge Base</button>
+          <button class="cpanel-tab" id="tabBehavior" onclick="chatPanelTab('behavior',this)">Behavior Prompt</button>
+        </div>
+
+        <!-- KB tab -->
+        <div class="cpanel-body" id="cpanelKB">
+          <div class="cpanel-toolbar">
+            <input id="chatKBSearch" type="text" placeholder="Search KB…" oninput="chatKBHighlight(this.value)">
+            <span id="chatPendingBadge" class="pending-badge" style="display:none">● pending</span>
+            <button class="cpanel-btn promote-btn" id="chatPromoteBtn" onclick="chatPromoteKB()" style="display:none">↑ Promote pending</button>
+            <button class="cpanel-btn" onclick="chatLoadKB()">↻ Refresh</button>
+          </div>
+          <div id="chatKBBody" class="cpanel-text">Loading…</div>
+          <div id="chatPendingSection" style="display:none">
+            <div class="cpanel-pending-head">⏳ Pending additions</div>
+            <div id="chatPendingBody" class="cpanel-text cpanel-pending-text">—</div>
+          </div>
+        </div>
+
+        <!-- Behavior tab -->
+        <div class="cpanel-body" id="cpanelBehavior" style="display:none">
+          <div class="cpanel-toolbar">
+            <button class="cpanel-btn" onclick="chatLoadBehavior()">↻ Refresh</button>
+          </div>
+          <div id="chatBehaviorBody" class="cpanel-text">Loading…</div>
+        </div>
       </div>
     </div>
 
@@ -547,7 +707,7 @@ function showPage(name, btn) {
   document.getElementById(name + 'Page').classList.add('visible');
   btn.classList.add('active');
   if (name === 'ab') abLoadQuestions();
-  if (name === 'chat') document.getElementById('chatInput').focus();
+  if (name === 'chat') { document.getElementById('chatInput').focus(); chatLoadKB(); chatLoadBehavior(); }
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────
@@ -573,6 +733,9 @@ async function doLogin() {
     abLoadQuestions();
     chatAddMsg('bot', data.reply || 'Hello! What would you like to change?');
     document.getElementById('chatInput').focus();
+    // Pre-load KB and behavior panels
+    chatLoadKB();
+    chatLoadBehavior();
   } catch (e) { err.textContent = 'Error: ' + e.message; }
 }
 
@@ -622,14 +785,107 @@ async function chatSend() {
     const reply = data.reply || 'No response.';
     chatHistory.push({ role: 'assistant', content: reply });
     chatAddMsg('bot', reply);
-    // Always reload AB state after any bot response — it may have saved something
+    // Always reload AB state + KB panel after any bot response — it may have saved something
     abLoadQuestions().catch(() => {});
+    chatLoadKB().catch(() => {});
   } catch (e) {
     typing.style.display = 'none';
     chatAddNote('Error: ' + e.message);
   } finally {
     document.getElementById('chatSendBtn').disabled = false;
     document.getElementById('chatInput').focus();
+  }
+}
+
+// ── CHAT PANEL (KB + Behavior tabs) ────────────────────────────────
+function chatPanelTab(name, btn) {
+  document.querySelectorAll('.cpanel-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.cpanel-body').forEach(b => b.style.display = 'none');
+  btn.classList.add('active');
+  document.getElementById('cpanel' + name.charAt(0).toUpperCase() + name.slice(1)).style.display = 'flex';
+}
+
+async function chatLoadKB() {
+  const body = document.getElementById('chatKBBody');
+  const pendingSection = document.getElementById('chatPendingSection');
+  const pendingBody    = document.getElementById('chatPendingBody');
+  const pendingBadge   = document.getElementById('chatPendingBadge');
+  const promoteBtn     = document.getElementById('chatPromoteBtn');
+  try {
+    const res  = await fetch(`${PROXY}/config`);
+    const { config } = await res.json();
+    const kb      = config.knowledge_base || '';
+    const pending = config.knowledge_base_pending || '';
+    // Render main KB
+    body.textContent = kb || '(empty)';
+    // Render pending section
+    if (pending.trim()) {
+      pendingSection.style.display = 'flex';
+      pendingSection.style.flexDirection = 'column';
+      pendingBody.textContent = pending;
+      pendingBadge.style.display = '';
+      promoteBtn.style.display   = '';
+    } else {
+      pendingSection.style.display = 'none';
+      pendingBadge.style.display   = 'none';
+      promoteBtn.style.display     = 'none';
+    }
+    // Re-apply any active search highlight
+    const q = document.getElementById('chatKBSearch').value;
+    if (q) chatKBHighlight(q);
+  } catch (e) {
+    body.textContent = 'Error loading KB: ' + e.message;
+  }
+}
+
+async function chatLoadBehavior() {
+  const body = document.getElementById('chatBehaviorBody');
+  try {
+    const res  = await fetch(`${PROXY}/config`);
+    const { config } = await res.json();
+    body.textContent = config.system_prompt || '(empty)';
+  } catch (e) {
+    body.textContent = 'Error loading behavior: ' + e.message;
+  }
+}
+
+function chatKBHighlight(query) {
+  const body = document.getElementById('chatKBBody');
+  const raw  = body.textContent;
+  if (!query) { body.innerHTML = escapeHtml(raw); return; }
+  const escaped = escapeHtml(raw);
+  const re = new RegExp(escapeRegex(query), 'gi');
+  body.innerHTML = escaped.replace(re, m => `<mark>${m}</mark>`);
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function chatPromoteKB() {
+  if (!confirm('Merge pending additions into the main Knowledge Base and clear the pending queue?')) return;
+  const btn = document.getElementById('chatPromoteBtn');
+  btn.disabled = true;
+  btn.textContent = 'Promoting…';
+  try {
+    const res = await fetch(`${PROXY}/admin/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPw },
+      body: JSON.stringify({ messages: [{ role: 'user', content: 'Please promote the pending knowledge base additions into the main document now.' }] }),
+    });
+    const data = await res.json();
+    chatAddNote('✓ ' + (data.reply || 'Promoted.'));
+    chatHistory.push({ role: 'user', content: 'Please promote the pending knowledge base additions into the main document now.' });
+    chatHistory.push({ role: 'assistant', content: data.reply || 'Promoted.' });
+    await chatLoadKB();
+  } catch (e) {
+    chatAddNote('Promote error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↑ Promote pending';
   }
 }
 
@@ -649,9 +905,11 @@ async function abLoadQuestions() {
     }
     abLiveBehavior  = config?.system_prompt  || '';
     abLiveKnowledge = config?.knowledge_base || '';
-    abLivePrompt = abLiveBehavior && abLiveKnowledge
-      ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
-      : abLiveBehavior || abLiveKnowledge;
+    const abPending = config?.knowledge_base_pending || '';
+    const fullKB    = abPending ? abLiveKnowledge + '\n\n--- RECENT ADDITIONS ---\n' + abPending : abLiveKnowledge;
+    abLivePrompt = abLiveBehavior && fullKB
+      ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + fullKB
+      : abLiveBehavior || fullKB;
     // Always update KB display
     abRenderKB(abLiveKnowledge);
     // Always update draft pane to match what was last saved in Chat Editor
