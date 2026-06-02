@@ -637,7 +637,12 @@ async function abLoadLivePrompt() {
   try {
     const res = await fetch(`${PROXY}/config`);
     const { config } = await res.json();
-    abLivePrompt = config?.system_prompt || '';
+    // Combine behavior + knowledge base exactly as the Worker does at runtime
+    const behavior  = config?.system_prompt  || '';
+    const knowledge = config?.knowledge_base || '';
+    abLivePrompt = behavior && knowledge
+      ? behavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + knowledge
+      : behavior || knowledge;
     const liveView = document.getElementById('abLivePromptView');
     if (liveView) liveView.value = abLivePrompt;
     document.getElementById('abDraftPrompt').value = abLivePrompt;

@@ -36,7 +36,7 @@ function json(data, status = 200, origin = '') {
   });
 }
 
-const CONFIG_KEYS = ['system_prompt', 'tagline', 'subtitle', 'welcome_message', 'quick_questions', 'ab_questions'];
+const CONFIG_KEYS = ['system_prompt', 'tagline', 'subtitle', 'welcome_message', 'quick_questions', 'ab_questions', 'knowledge_base'];
 
 async function getConfig(env) {
   const result = {};
@@ -73,11 +73,12 @@ const ADMIN_TOOLS = [
   {
     name: 'save_config',
     description: `Save one or more config fields to the live site. Only call this AFTER the user has explicitly confirmed the change. Fields you can save:
-- system_prompt (string): the full AI persona and knowledge base
+- system_prompt (string): HOW the agent behaves — tone, persona, reasoning style, follow-up logic. Does NOT contain facts about Ethan.
+- knowledge_base (string): WHAT the agent knows — verified facts about Ethan Watters: his biography, books, articles, career, quotes, speaking history, etc. This is a separate document from system_prompt.
 - tagline (string): small text above the site name
-- subtitle (string): the one-liner description under the name  
+- subtitle (string): the one-liner description under the name
 - welcome_message (string): the first message shown in the chat
-- quick_questions (object): { modeName: ["q1","q2","q3","q4"] } for each mode (curious, publisher, speaker, academic, collaborator, recruiter)
+- quick_questions (object): { modeName: ["q1","q2","q3","q4"] } for each mode
 Only include fields you are actually changing.`,
     input_schema: {
       type: 'object',
@@ -114,20 +115,44 @@ YOUR ROLE:
 - Never save anything without his explicit "yes", "looks good", "save it", or equivalent confirmation
 - Be conversational, collaborative, and clear — this is a creative editorial partnership
 
-WHAT YOU CAN CHANGE:
-1. System prompt — the AI's full persona, knowledge base, and behavior rules
-2. Tagline — the small text above the site name (e.g. "Powered by AI · Evidence-based")
-3. Subtitle — the one-liner under "Ask EthanExpert"
-4. Welcome message — the first thing the AI says when someone opens the chat
-5. Quick questions — the suggestion buttons for each visitor mode (curious / publisher / speaker / academic / collaborator / recruiter)
+TWO SEPARATE DOCUMENTS — keep them distinct:
+
+1. BEHAVIOR PROMPT (system_prompt) — HOW the agent thinks and speaks.
+   Tone, persona, reasoning style, follow-up logic, rules of engagement.
+   Does NOT contain facts about Ethan. Think of it as the agent's personality and operating instructions.
+
+2. KNOWLEDGE BASE (knowledge_base) — WHAT the agent knows.
+   Verified facts: Ethan's biography, books, articles, career history, quotes, academic reception, speaking history, etc.
+   Ethan can add new facts, correct errors, or expand sections here.
+   Does NOT contain behavioral instructions.
+
+When someone asks to change "how the agent responds" → edit system_prompt.
+When someone asks to add or correct facts about Ethan → edit knowledge_base.
+
+OTHER EDITABLE FIELDS:
+- tagline — small text above the site name
+- subtitle — the one-liner under the title
+- welcome_message — first message in the chat
+- quick_questions — suggestion buttons per visitor mode
 
 CURRENT CONFIG (as of session start):
-${JSON.stringify(config, null, 2)}
+BEHAVIOR PROMPT (system_prompt):
+${config.system_prompt || '(not set)'}
+
+---
+
+KNOWLEDGE BASE (knowledge_base):
+${config.knowledge_base || '(not set)'}
+
+---
+
+OTHER CONFIG:
+${JSON.stringify({ tagline: config.tagline, subtitle: config.subtitle, welcome_message: config.welcome_message }, null, 2)}
 
 STYLE:
 - Be direct and smart. Ethan is a journalist — he'll appreciate precision and will notice vague language.
-- When proposing a change to the system prompt, quote the specific passage you're changing and show the replacement.
-- For quick questions, show the full updated list for that mode.
+- When proposing a change to the behavior prompt, quote the specific passage and show the replacement.
+- When proposing a change to the knowledge base, show exactly what you're adding/changing/removing.
 - After saving, confirm what changed and invite the next edit.`;
 }
 
@@ -294,8 +319,16 @@ export default {
     catch { return json({ error: 'Invalid JSON' }, 400, origin); }
 
     if (!body.system) {
-      const kv_prompt = await env.CONFIG.get('system_prompt');
-      if (kv_prompt) body.system = kv_prompt;
+      // Concatenate behavior prompt + knowledge base
+      const behavior  = await env.CONFIG.get('system_prompt');
+      const knowledge = await env.CONFIG.get('knowledge_base');
+      if (behavior && knowledge) {
+        body.system = behavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + knowledge;
+      } else if (behavior) {
+        body.system = behavior;
+      } else if (knowledge) {
+        body.system = knowledge;
+      }
     }
 
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
