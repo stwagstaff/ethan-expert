@@ -293,46 +293,96 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
 .ab-qlabel { font-size: 0.73rem; color: var(--ink-faint); margin-bottom: 0.6rem; font-style: italic; }
 
 /* Prompt bar — bottom strip */
-/* Prompt sub-panel inside each column — lower third */
-.ab-col-prompt {
-  flex-shrink: 0;
-  height: 33%;
-  border-top: 1px solid var(--border);
+/* Response columns — top half */
+#abResponseRow {
   display: flex;
-  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border-bottom: 2px solid var(--border);
   overflow: hidden;
 }
-.ab-col-prompt-label {
+.ab-resp-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+.ab-resp-col:last-child { border-right: none; }
+
+/* Document row — bottom half */
+#abDocRow {
+  display: flex;
+  height: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-top: none;
+}
+.ab-doc-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+.ab-doc-col:last-child { border-right: none; }
+.ab-doc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.75rem;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  padding: 0.4rem 0.75rem;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
   background: var(--surface-2);
+  gap: 0.5rem;
 }
-.ab-prompt-textarea {
+#abKBSearch {
+  flex: 1;
+  max-width: 180px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.76rem;
+  font-family: var(--font-mono);
+  background: #fff;
+  color: var(--ink);
+}
+#abKBSearch:focus { outline: 1px solid var(--accent); }
+.ab-doc-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  line-height: 1.55;
+  color: var(--ink-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ab-doc-body mark {
+  background: #fff3a3;
+  color: var(--ink);
+  border-radius: 2px;
+}
+.ab-doc-textarea {
   flex: 1;
   border: none;
   outline: none;
-  padding: 0.6rem 0.75rem;
-  font-size: 0.76rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.78rem;
   font-family: var(--font-mono);
+  line-height: 1.55;
   resize: none;
   background: #fff;
   color: var(--ink);
-  line-height: 1.5;
 }
-.ab-prompt-textarea[readonly] {
-  background: #faf9f7;
-  color: var(--ink-muted);
-  cursor: default;
-}
-.ab-prompt-textarea:focus { outline: none; }
 .ab-load-btn { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border) !important; }
 .ab-promote-btn { background: #27ae60; color: #fff; }
 .ab-promote-btn:hover { background: #219a52; }
@@ -422,39 +472,51 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
 
       <!-- Side-by-side response + prompt columns -->
       <div id="abColumns">
-        <div class="ab-col">
-          <div class="ab-col-head a-head">A — Live prompt</div>
-          <div class="ab-col-body" id="abColA">
-            <span class="ab-placeholder">Pick a question above to run a comparison.</span>
+
+        <!-- ── TOP HALF: responses ── -->
+        <div id="abResponseRow">
+          <div class="ab-resp-col">
+            <div class="ab-col-head a-head">A — Live prompt</div>
+            <div class="ab-col-body" id="abColA">
+              <span class="ab-placeholder">Pick a question above to run a comparison.</span>
+            </div>
           </div>
-          <div class="ab-col-prompt">
-              <div class="ab-col-prompt-label">Live — behavior prompt</div>
-              <textarea id="abLiveBehaviorView" class="ab-prompt-textarea" readonly
-                        placeholder="Behavior prompt loads here…" style="height:40%;border-bottom:1px solid var(--border)"></textarea>
-              <div class="ab-col-prompt-label" style="border-top:none">Live — knowledge base</div>
-              <textarea id="abLiveKBView" class="ab-prompt-textarea" readonly
-                        placeholder="Knowledge base loads here…" style="height:60%"></textarea>
+          <div class="ab-resp-col">
+            <div class="ab-col-head b-head">B — Draft prompt</div>
+            <div class="ab-col-body" id="abColB">
+              <span class="ab-placeholder">Pick a question above to run a comparison.</span>
+            </div>
           </div>
         </div>
-        <div class="ab-col">
-          <div class="ab-col-head b-head">B — Draft prompt</div>
-          <div class="ab-col-body" id="abColB">
-            <span class="ab-placeholder">Pick a question above to run a comparison.</span>
+
+        <!-- ── BOTTOM HALF: knowledge base (left) + draft behavior (right) ── -->
+        <div id="abDocRow">
+
+          <!-- Left: searchable knowledge base (read-only, live) -->
+          <div class="ab-doc-col" id="abKBCol">
+            <div class="ab-doc-head">
+              <span>Knowledge base</span>
+              <input id="abKBSearch" type="text" placeholder="Search…"
+                     oninput="abHighlightSearch(this.value)">
+            </div>
+            <div class="ab-doc-body" id="abKBBody">
+              <span class="ab-placeholder">Loading…</span>
+            </div>
           </div>
-          <div class="ab-col-prompt">
-            <div class="ab-col-prompt-label">
-              Draft — behavior prompt
-              <span style="float:right;display:flex;gap:0.4rem;">
+
+          <!-- Right: draft behavior prompt (editable) + promote -->
+          <div class="ab-doc-col" id="abDraftCol">
+            <div class="ab-doc-head">
+              <span>Draft behavior prompt</span>
+              <span style="display:flex;gap:0.4rem;">
                 <button class="ab-load-btn" onclick="abLoadLivePrompt()">↓ Copy live</button>
                 <button class="ab-promote-btn" onclick="abPromoteB()">✓ Promote → Live</button>
               </span>
             </div>
-            <textarea id="abDraftPrompt" class="ab-prompt-textarea"
-                      placeholder="Edit draft behavior prompt here…" style="height:40%;border-bottom:1px solid var(--border)"></textarea>
-            <div class="ab-col-prompt-label" style="border-top:none">Draft — knowledge base</div>
-            <textarea id="abDraftKB" class="ab-prompt-textarea"
-                      placeholder="Edit draft knowledge base here…" style="height:60%"></textarea>
+            <textarea id="abDraftPrompt" class="ab-doc-textarea"
+                      placeholder="Edits made in the Chat Editor appear here automatically…"></textarea>
           </div>
+
         </div>
       </div>
 
@@ -595,11 +657,11 @@ async function abLoadQuestions() {
     if (bv) bv.value = abLiveBehavior;
     const kv = document.getElementById('abLiveKBView');
     if (kv) kv.value = abLiveKnowledge;
-    // Seed draft panes if empty
+    // Render KB as readable div
+    abRenderKB(abLiveKnowledge);
+    // Seed draft behavior if empty
     const db = document.getElementById('abDraftPrompt');
     if (db && !db.value) db.value = abLiveBehavior;
-    const dk = document.getElementById('abDraftKB');
-    if (dk && !dk.value) dk.value = abLiveKnowledge;
   } catch (e) { /* silent */ }
   abRenderQuestions();
 }
@@ -617,8 +679,8 @@ async function abLoadLivePrompt() {
     if (bv) bv.value = abLiveBehavior;
     const kv = document.getElementById('abLiveKBView');
     if (kv) kv.value = abLiveKnowledge;
+    abRenderKB(abLiveKnowledge);
     document.getElementById('abDraftPrompt').value = abLiveBehavior;
-    document.getElementById('abDraftKB').value = abLiveKnowledge;
   } catch (e) { /* silent */ }
 }
 
@@ -669,6 +731,27 @@ function abRenderQuestions() {
 }
 
 // Load ab_questions from KV on page open
+function abRenderKB(text) {
+  const el = document.getElementById('abKBBody');
+  if (!el) return;
+  el.textContent = text || '(empty)';
+}
+
+function abHighlightSearch(query) {
+  const el = document.getElementById('abKBBody');
+  if (!el) return;
+  const raw = abLiveKnowledge || '';
+  if (!query.trim()) { el.textContent = raw; return; }
+  // Escape for regex
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(${escaped})`, 'gi');
+  el.innerHTML = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(re, '<mark>$1</mark>');
+  // Scroll to first match
+  const first = el.querySelector('mark');
+  if (first) first.scrollIntoView({ block: 'center' });
+}
+
 // Save current textarea content for this persona to KV
 async function abSaveQuestions() {
   const raw = document.getElementById('abQEdit').value.trim();
@@ -754,13 +837,12 @@ async function abRunQuestion(btn, question) {
   const colA = document.getElementById('abColA');
   const colB = document.getElementById('abColB');
   const draftBehavior = document.getElementById('abDraftPrompt').value.trim();
-  const draftKB       = document.getElementById('abDraftKB').value.trim();
   // A = live behavior + live KB (what users actually see)
   const liveFullPrompt = abLivePrompt;
-  // B = draft behavior + draft KB
-  const draftFullPrompt = draftBehavior && draftKB
-    ? draftBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + draftKB
-    : draftBehavior || draftKB || liveFullPrompt;
+  // B = draft behavior + live KB (test behavior changes against same facts)
+  const draftFullPrompt = draftBehavior && abLiveKnowledge
+    ? draftBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
+    : draftBehavior || liveFullPrompt;
 
   const label = `<div class="ab-qlabel">"${question}"</div>`;
   colA.innerHTML = label + '<div class="ab-running">Running A…</div>';
@@ -806,30 +888,20 @@ async function abRunQuestion(btn, question) {
 
 async function abPromoteB() {
   const draftBehavior = document.getElementById('abDraftPrompt').value.trim();
-  const draftKB       = document.getElementById('abDraftKB').value.trim();
-  if (!draftBehavior && !draftKB) { alert('Nothing to promote.'); return; }
-  const parts = [];
-  if (draftBehavior) parts.push('behavior prompt');
-  if (draftKB) parts.push('knowledge base');
-  if (!confirm(`Promote draft ${parts.join(' and ')} to live? This immediately affects all users.`)) return;
+  if (!draftBehavior) { alert('No draft behavior prompt to promote.'); return; }
+  if (!confirm('Promote draft behavior prompt to live? This immediately affects all users.')) return;
   try {
-    const payload = {};
-    if (draftBehavior) payload.system_prompt  = draftBehavior;
-    if (draftKB)       payload.knowledge_base = draftKB;
     const res = await fetch(`${PROXY}/admin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPw },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ system_prompt: draftBehavior }),
     });
     const data = await res.json();
     if (data.ok) {
-      if (draftBehavior) abLiveBehavior = draftBehavior;
-      if (draftKB)       abLiveKnowledge = draftKB;
-      abLivePrompt = abLiveBehavior && abLiveKnowledge
-        ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
-        : abLiveBehavior || abLiveKnowledge;
-      if (draftBehavior) { const bv = document.getElementById('abLiveBehaviorView'); if(bv) bv.value = draftBehavior; }
-      if (draftKB)       { const kv = document.getElementById('abLiveKBView');       if(kv) kv.value = draftKB; }
+      abLiveBehavior = draftBehavior;
+      abLivePrompt = draftBehavior && abLiveKnowledge
+        ? draftBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
+        : draftBehavior || abLiveKnowledge;
       const bHead = document.querySelector('.b-head');
       const orig = bHead.innerHTML;
       bHead.innerHTML = '✓ Promoted to live!';
