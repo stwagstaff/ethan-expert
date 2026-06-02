@@ -1069,8 +1069,14 @@ const QUICK_QUESTIONS = {
 // INIT
 // ══════════════════════════════════════════════
 function init() {
-  const savedKey = sessionStorage.getItem('ew_api_key');
-  if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
+  // Hardcoded key for prototype — rotate after testing
+  const HARDCODED_KEY = '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';
+  sessionStorage.setItem('ew_api_key', HARDCODED_KEY);
+  sessionStorage.setItem('ew_provider', 'anthropic');
+  document.getElementById('apiKeyInput').value = HARDCODED_KEY;
+  const status = document.getElementById('apiStatus');
+  status.textContent = '✓ Key loaded';
+  status.className = 'api-status ok';
 
   const savedProvider = sessionStorage.getItem('ew_provider') || 'anthropic';
   document.getElementById('providerSelect').value = savedProvider;
