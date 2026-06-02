@@ -142,7 +142,7 @@ ${config.system_prompt || '(not set)'}
 ---
 
 KNOWLEDGE BASE (knowledge_base):
-${config.knowledge_base || '(not set)'}
+[${config.knowledge_base ? Math.round(config.knowledge_base.length / 1000) + 'K chars — use get_current_config to read or edit it. Do NOT load it unless Ethan specifically asks to view or change it.' : '(not set)'}]
 
 ---
 
