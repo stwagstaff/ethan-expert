@@ -747,8 +747,8 @@ async function abRunQuestion(btn, question) {
       model: 'claude-sonnet-4-6',
       messages: [{ role: 'user', content: question }],
       max_tokens: 800,
+      temperature: 0,   // deterministic — same prompt = same response
     };
-    // Only include system if we have one — Worker will inject KV prompt if absent
     if (prompt) body.system = prompt + `\n\n[USER MODE: ${abPersona}]`;
     const res = await fetch(PROXY, {
       method: 'POST',
@@ -760,7 +760,17 @@ async function abRunQuestion(btn, question) {
     return data.content?.[0]?.text || '(no response)';
   }
 
-  const [rA, rB] = await Promise.allSettled([call(live), call(draft || live)]);
+  // If both prompts are identical, run only once and reuse the result
+  const samePrompt = (draft || live) === live;
+  let rA, rB;
+  if (samePrompt) {
+    const single = await Promise.allSettled([call(live)]);
+    rA = single[0];
+    rB = { status: rA.status, value: rA.value, reason: rA.reason };
+  } else {
+    [rA, rB] = await Promise.allSettled([call(live), call(draft)]);
+  }
+
   colA.innerHTML = label + (rA.status === 'fulfilled'
     ? renderMarkdown(rA.value)
     : `<span style="color:#c0392b">Error: ${rA.reason?.message}</span>`);
