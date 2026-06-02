@@ -458,7 +458,7 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
   document.getElementById(name + 'Page').classList.add('visible');
   btn.classList.add('active');
-  if (name === 'ab' && !abLivePrompt) abLoadQuestions();
+  if (name === 'ab') abLoadQuestions();
   if (name === 'chat') document.getElementById('chatInput').focus();
 }
 
@@ -481,6 +481,8 @@ async function doLogin() {
     document.getElementById('signOutBtn').style.display = '';
     document.getElementById('chatPage').classList.add('visible');
     document.getElementById('nav-chat').classList.add('active');
+    // Pre-load questions and live prompt in background on login
+    abLoadQuestions();
     chatAddMsg('bot', data.reply || 'Hello! What would you like to change?');
     document.getElementById('chatInput').focus();
   } catch (e) { err.textContent = 'Error: ' + e.message; }
