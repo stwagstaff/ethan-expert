@@ -552,6 +552,46 @@
     font-style: italic;
   }
 </style>
+
+<style>
+/* ── ADMIN OVERLAY ── */
+#adminOverlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+}
+#adminPanel {
+  background: #fff;
+  border-radius: 8px;
+  padding: 2rem;
+  width: min(700px, 95vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+#adminPanel h2 { font-size: 1.2rem; color: var(--ink); margin: 0; }
+#adminPanel label { font-size: 0.8rem; font-weight: 600; color: var(--ink-muted); display: block; margin-bottom: 0.25rem; }
+#adminPanel input[type=password], #adminPanel input[type=text], #adminPanel textarea {
+  width: 100%; border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.5rem 0.65rem; font-size: 0.9rem; font-family: inherit;
+}
+#adminPanel textarea { resize: vertical; font-family: var(--font-mono); font-size: 0.8rem; }
+#adminPanel .admin-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+#adminPanel .admin-row button {
+  padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;
+  font-size: 0.9rem; font-weight: 600;
+}
+.admin-btn-primary { background: var(--accent); color: #fff; }
+.admin-btn-secondary { background: var(--surface-2); color: var(--ink); }
+#adminStatus { font-size: 0.85rem; color: var(--ink-muted); min-height: 1.2em; }
+#adminFields { display: none; flex-direction: column; gap: 1rem; }
+</style>
 </head>
 <body>
 
@@ -1071,7 +1111,6 @@ const QUICK_QUESTIONS = {
 function init() {
   // API key is held server-side in the Cloudflare Worker secret — no key needed here.
   sessionStorage.setItem('ew_provider', 'anthropic');
-  // Mark sidebar as ready (no user key required for Anthropic via proxy)
   const status = document.getElementById('apiStatus');
   if (status) {
     status.textContent = '✓ Ready';
@@ -1081,7 +1120,27 @@ function init() {
   const savedProvider = sessionStorage.getItem('ew_provider') || 'anthropic';
   document.getElementById('providerSelect').value = savedProvider;
 
-  renderQuickQuestions();
+  // Load live config from KV (system prompt, tagline, subtitle, welcome, quick questions)
+  fetch('https://ethan-expert-proxy.threedwag.workers.dev/config')
+    .then(r => r.json())
+    .then(({ config }) => {
+      if (!config) return;
+      if (config.system_prompt) window._SYSTEM_PROMPT_LIVE = config.system_prompt;
+      if (config.tagline)  document.querySelector('.masthead-label').textContent = config.tagline;
+      if (config.subtitle) document.querySelector('.masthead-sub').textContent   = config.subtitle;
+      if (config.quick_questions && typeof config.quick_questions === 'object' && !Array.isArray(config.quick_questions)) {
+        Object.assign(QUICK_QUESTIONS, config.quick_questions);
+      }
+    })
+    .catch(() => {}) // silent fail — hardcoded defaults remain
+    .finally(() => renderQuickQuestions());
+
+  // Open admin panel if ?admin in URL
+  if (new URLSearchParams(window.location.search).has('admin')) {
+    openAdmin();
+  } else {
+    renderQuickQuestions();
+  }
 }
 
 function renderQuickQuestions() {
@@ -1244,7 +1303,8 @@ async function callOpenAI(key) {
 
 async function callAnthropic() {
   const modeNote = `\n\n[USER MODE: ${currentMode}]`;
-  const systemWithMode = SYSTEM_PROMPT + modeNote;
+  // Use live KV prompt if admin has updated it, otherwise fall back to hardcoded
+  const activePrompt = (window._SYSTEM_PROMPT_LIVE || SYSTEM_PROMPT) + modeNote;
 
   // Cloudflare Worker proxy — API key is held server-side as a Worker secret.
   // No credentials are sent from the browser.
@@ -1255,9 +1315,9 @@ async function callAnthropic() {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
+      body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      system: systemWithMode,
+      system: activePrompt,
       messages: conversationHistory,
       max_tokens: 1500,
     }),
@@ -1416,8 +1476,127 @@ async function testAPI() {
   }
 }
 
+// ══════════════════════════════════════════════
+// ADMIN PANEL
+// ══════════════════════════════════════════════
+const PROXY = 'https://ethan-expert-proxy.threedwag.workers.dev';
+
+function openAdmin() {
+  document.getElementById('adminOverlay').style.display = 'flex';
+}
+function closeAdmin() {
+  document.getElementById('adminOverlay').style.display = 'none';
+}
+
+async function adminLoad() {
+  const pw = document.getElementById('adminPw').value.trim();
+  if (!pw) return alert('Enter the admin password first.');
+  const statusEl = document.getElementById('adminStatus');
+  statusEl.textContent = 'Loading…';
+  try {
+    const res = await fetch(`${PROXY}/admin`, { headers: { 'Admin-Password': pw } });
+    if (res.status === 401) { statusEl.textContent = '✗ Wrong password.'; return; }
+    const { config } = await res.json();
+    document.getElementById('adminSystemPrompt').value = config.system_prompt || SYSTEM_PROMPT;
+    document.getElementById('adminTagline').value      = config.tagline  || document.querySelector('.masthead-label').textContent;
+    document.getElementById('adminSubtitle').value     = config.subtitle || document.querySelector('.masthead-sub').textContent;
+    document.getElementById('adminWelcome').value      = config.welcome_message || '';
+    if (config.quick_questions && typeof config.quick_questions === 'object' && !Array.isArray(config.quick_questions)) {
+      document.getElementById('adminQuickQ').value = Object.entries(config.quick_questions)
+        .map(([mode, qs]) => `[${mode}]\n${qs.join('\n')}`).join('\n\n');
+    } else {
+      document.getElementById('adminQuickQ').value = Object.entries(QUICK_QUESTIONS)
+        .map(([mode, qs]) => `[${mode}]\n${qs.join('\n')}`).join('\n\n');
+    }
+    document.getElementById('adminFields').style.display = 'block';
+    statusEl.textContent = '✓ Loaded — edit below and hit Save.';
+    sessionStorage.setItem('adminPw', pw);
+  } catch (e) { statusEl.textContent = '✗ Error: ' + e.message; }
+}
+
+async function adminSave() {
+  const pw = sessionStorage.getItem('adminPw') || document.getElementById('adminPw').value.trim();
+  const statusEl = document.getElementById('adminStatus');
+  statusEl.textContent = 'Saving…';
+  const rawQQ = document.getElementById('adminQuickQ').value.trim();
+  let quick_questions = {};
+  rawQQ.split(/\n(?=\[)/).forEach(block => {
+    const m = block.match(/^\[(\w+)\]\n([\s\S]+)/);
+    if (m) quick_questions[m[1]] = m[2].split('\n').map(s => s.trim()).filter(Boolean);
+  });
+  const payload = {
+    system_prompt:   document.getElementById('adminSystemPrompt').value.trim(),
+    tagline:         document.getElementById('adminTagline').value.trim(),
+    subtitle:        document.getElementById('adminSubtitle').value.trim(),
+    welcome_message: document.getElementById('adminWelcome').value.trim(),
+    quick_questions,
+  };
+  try {
+    const res = await fetch(`${PROXY}/admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Admin-Password': pw },
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) { statusEl.textContent = '✗ Wrong password.'; return; }
+    const data = await res.json();
+    if (data.ok) {
+      statusEl.textContent = '✓ Saved! Changes are live immediately.';
+      applyConfig(payload);
+    } else { statusEl.textContent = '✗ ' + data.error; }
+  } catch (e) { statusEl.textContent = '✗ Error: ' + e.message; }
+}
+
+function applyConfig(config) {
+  if (config.system_prompt) window._SYSTEM_PROMPT_LIVE = config.system_prompt;
+  if (config.tagline)  document.querySelector('.masthead-label').textContent = config.tagline;
+  if (config.subtitle) document.querySelector('.masthead-sub').textContent   = config.subtitle;
+}
+
 // Start
 init();
 </script>
+<!-- ADMIN OVERLAY -->
+<div id="adminOverlay">
+  <div id="adminPanel">
+    <h2>🔐 EthanExpert Admin</h2>
+    <div>
+      <label>Admin Password</label>
+      <input type="password" id="adminPw" placeholder="Enter password…" autocomplete="off">
+    </div>
+    <div class="admin-row">
+      <button class="admin-btn-primary" onclick="adminLoad()">Load Current Config</button>
+      <button class="admin-btn-secondary" onclick="closeAdmin()">Cancel</button>
+    </div>
+    <div id="adminStatus"></div>
+
+    <div id="adminFields">
+      <div>
+        <label>Tagline (small text above name)</label>
+        <input type="text" id="adminTagline">
+      </div>
+      <div>
+        <label>Subtitle (under the name)</label>
+        <input type="text" id="adminSubtitle">
+      </div>
+      <div>
+        <label>Welcome message (first bubble when someone opens the chat)</label>
+        <textarea id="adminWelcome" rows="3"></textarea>
+      </div>
+      <div>
+        <label>System Prompt (what Ethan knows and how he behaves)</label>
+        <textarea id="adminSystemPrompt" rows="20"></textarea>
+      </div>
+      <div>
+        <label>Quick Questions — format: [mode] on one line, then one question per line. Modes: curious, publisher, speaker, academic, collaborator, recruiter</label>
+        <textarea id="adminQuickQ" rows="20"></textarea>
+      </div>
+      <div class="admin-row">
+        <button class="admin-btn-primary" onclick="adminSave()">💾 Save All Changes</button>
+        <button class="admin-btn-secondary" onclick="closeAdmin()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
