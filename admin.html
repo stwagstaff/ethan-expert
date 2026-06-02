@@ -652,16 +652,11 @@ async function abLoadQuestions() {
     abLivePrompt = abLiveBehavior && abLiveKnowledge
       ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
       : abLiveBehavior || abLiveKnowledge;
-    // Update live panes
-    const bv = document.getElementById('abLiveBehaviorView');
-    if (bv) bv.value = abLiveBehavior;
-    const kv = document.getElementById('abLiveKBView');
-    if (kv) kv.value = abLiveKnowledge;
-    // Render KB as readable div
+    // Always update KB display
     abRenderKB(abLiveKnowledge);
-    // Seed draft behavior if empty
+    // Always update draft pane to match what was last saved in Chat Editor
     const db = document.getElementById('abDraftPrompt');
-    if (db && !db.value) db.value = abLiveBehavior;
+    if (db) db.value = abLiveBehavior;
   } catch (e) { /* silent */ }
   abRenderQuestions();
 }
