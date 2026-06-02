@@ -554,7 +554,7 @@ async function chatSend() {
     const reply = data.reply || 'No response.';
     chatHistory.push({ role: 'assistant', content: reply });
     chatAddMsg('bot', reply);
-    if (reply.toLowerCase().includes('saved')) abLoadLivePrompt().catch(() => {});
+    if (reply.toLowerCase().includes('saved')) abLoadQuestions().catch(() => {});
   } catch (e) {
     typing.style.display = 'none';
     chatAddNote('Error: ' + e.message);
@@ -623,8 +623,12 @@ async function abLoadQuestions() {
     if (config?.ab_questions && typeof config.ab_questions === 'object') {
       Object.assign(abQuestionCache, config.ab_questions);
     }
-    abLivePrompt = config?.system_prompt || '';
-    // Show live prompt in both the view pane and seed the draft if empty
+    // Combine behavior + knowledge base exactly as the Worker does
+    const behavior  = config?.system_prompt  || '';
+    const knowledge = config?.knowledge_base || '';
+    abLivePrompt = behavior && knowledge
+      ? behavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + knowledge
+      : behavior || knowledge;
     const liveView = document.getElementById('abLivePromptView');
     if (liveView) liveView.value = abLivePrompt;
     const draft = document.getElementById('abDraftPrompt');
@@ -708,14 +712,6 @@ async function abGenerateQuestions() {
   }
 }
 
-async function abLoadLivePrompt() {
-  try {
-    const res = await fetch(`${PROXY}/config`);
-    const { config } = await res.json();
-    abLivePrompt = config?.system_prompt || '';
-    document.getElementById('abDraftPrompt').value = abLivePrompt;
-  } catch (e) { /* silent */ }
-}
 
 function renderMarkdown(text) {
   return text
