@@ -1080,6 +1080,10 @@ function init() {
       if (config.system_prompt) window._SYSTEM_PROMPT_LIVE = config.system_prompt;
       if (config.tagline)  document.querySelector('.masthead-label').textContent = config.tagline;
       if (config.subtitle) document.querySelector('.masthead-sub').textContent   = config.subtitle;
+      if (config.welcome_message) {
+        const wh = document.querySelector('.welcome-heading');
+        if (wh) wh.innerHTML = config.welcome_message;
+      }
       if (config.quick_questions && typeof config.quick_questions === 'object' && !Array.isArray(config.quick_questions)) {
         Object.assign(QUICK_QUESTIONS, config.quick_questions);
       }
