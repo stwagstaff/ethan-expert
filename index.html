@@ -25,7 +25,6 @@ html, body {
   overflow: hidden;
 }
 
-/* ── APP SHELL ── */
 #app {
   height: 100dvh;
   display: flex;
@@ -35,15 +34,15 @@ html, body {
   padding: 0 1.5rem;
 }
 
-/* ── HEADER (shown during chat) ── */
+/* ── SMALL HEADER (chat mode) ── */
 #header {
   padding: 2rem 0 0;
   flex-shrink: 0;
-  display: none;        /* hidden until chat starts */
+  display: none;
 }
 #header.visible { display: block; }
 #header-name {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: normal;
   letter-spacing: 0.08em;
   color: var(--muted);
@@ -51,23 +50,19 @@ html, body {
 }
 #header-name em { font-style: normal; color: var(--accent); }
 
-/* ── HERO (centered on first load) ── */
+/* ── HERO (first load) ── */
 #hero {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  padding-bottom: 8vh;   /* shift slightly above true center */
+  padding-bottom: 8vh;
   gap: 2rem;
 }
 #hero.hidden { display: none; }
 
-#hero-title {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
+#hero-title { display: flex; flex-direction: column; gap: 0.4rem; }
 #hero-title-main {
   font-size: clamp(1.6rem, 4vw, 2.2rem);
   font-weight: normal;
@@ -75,66 +70,76 @@ html, body {
   color: var(--text);
   line-height: 1.15;
 }
-#hero-title-main em {
-  font-style: normal;
-  color: var(--accent);
-}
+#hero-title-main em { font-style: normal; color: var(--accent); }
 #hero-subtitle {
   font-size: 0.85rem;
   color: var(--muted);
   font-family: var(--mono);
   letter-spacing: 0.04em;
 }
-
 #hero-question {
   font-size: 1.05rem;
   line-height: 1.7;
   color: var(--text);
 }
-
 #hero-input-area {
   width: 100%;
   border-top: 1px solid var(--border);
   padding-top: 0.75rem;
 }
 
-/* ── MESSAGES (shown during chat) ── */
-#messages {
+/* ── SINGLE-EXCHANGE DISPLAY (chat mode) ── */
+#exchange {
   flex: 1;
-  overflow-y: auto;
-  padding: 1.5rem 0 1rem;
-  display: flex;
+  display: none;
   flex-direction: column;
-  gap: 1.75rem;
-  scrollbar-width: none;
-  display: none;     /* hidden until chat starts */
+  justify-content: center;   /* vertically center the content */
+  padding: 1.5rem 0;
+  gap: 1.5rem;
+  overflow: hidden;
 }
-#messages.visible { display: flex; }
-#messages::-webkit-scrollbar { display: none; }
+#exchange.visible { display: flex; }
 
-.msg { display: flex; flex-direction: column; gap: 0.25rem; }
+/* User's question — shown briefly, then fades */
+#user-turn {
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.6;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  flex-shrink: 0;
+}
+#user-turn.show { opacity: 1; }
+#user-turn.fade { opacity: 0; }
 
-.msg-text {
+/* Agent's response — the main content */
+#agent-turn {
   font-size: 1.05rem;
-  line-height: 1.7;
+  line-height: 1.75;
   color: var(--text);
+  overflow-y: auto;
+  scrollbar-width: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  max-height: 55vh;
 }
-.msg-text p { margin-bottom: 0.75em; }
-.msg-text p:last-child { margin-bottom: 0; }
-.msg-text strong { color: #fff; font-weight: 600; }
-.msg-text em { color: var(--muted); font-style: italic; }
-.msg-text ul { padding-left: 1.2em; margin: 0.5em 0; }
-.msg-text li { margin-bottom: 0.3em; }
-.msg-text h3 { font-size: 1rem; font-weight: 600; margin: 0.75em 0 0.35em; color: #fff; }
-.msg-text blockquote {
+#agent-turn::-webkit-scrollbar { display: none; }
+#agent-turn.show { opacity: 1; }
+#agent-turn p { margin-bottom: 0.75em; }
+#agent-turn p:last-child { margin-bottom: 0; }
+#agent-turn strong { color: #fff; font-weight: 600; }
+#agent-turn em { color: var(--muted); font-style: italic; }
+#agent-turn ul { padding-left: 1.2em; margin: 0.5em 0; }
+#agent-turn li { margin-bottom: 0.3em; }
+#agent-turn h3 { font-size: 1rem; font-weight: 600; margin: 0.75em 0 0.35em; color: #fff; }
+#agent-turn blockquote {
   border-left: 2px solid var(--border);
   padding-left: 1em;
   color: var(--muted);
   font-style: italic;
 }
-.msg.user .msg-text { color: var(--muted); font-size: 0.95rem; }
 
-/* ── PERSONA CHOICES ── */
+/* Persona choices */
 .persona-choices { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; }
 .persona-choice {
   background: none; border: none;
@@ -146,7 +151,7 @@ html, body {
 }
 .persona-choice:hover { color: var(--text); border-left-color: var(--accent); }
 
-/* ── TYPING ── */
+/* Typing dots */
 #typing {
   display: none; gap: 5px; align-items: center; height: 1.5rem;
 }
@@ -161,16 +166,15 @@ html, body {
   40%           { opacity: 1;   transform: scale(1); }
 }
 
-/* ── CHAT INPUT AREA (bottom, shown during chat) ── */
+/* ── INPUT (chat mode) ── */
 #chat-input-area {
   flex-shrink: 0;
   padding: 0.75rem 0 1.5rem;
   border-top: 1px solid var(--border);
-  display: none;    /* hidden until chat starts */
+  display: none;
 }
 #chat-input-area.visible { display: block; }
 
-/* ── SHARED INPUT STYLES ── */
 .input-wrap { display: flex; align-items: flex-end; gap: 0.75rem; }
 .input-field {
   flex: 1; background: none; border: none; outline: none;
@@ -189,57 +193,56 @@ html, body {
 <body>
 <div id="app">
 
-  <!-- Small header shown only during chat -->
   <div id="header">
     <span id="header-name">Ask <em>EthanExpert</em></span>
   </div>
 
-  <!-- Hero — centered on first load, hidden once chat starts -->
+  <!-- Hero (first load) -->
   <div id="hero">
     <div id="hero-title">
       <div id="hero-title-main">Ask <em>EthanExpert</em></div>
       <div id="hero-subtitle">Explore the world of Ethan Watters</div>
     </div>
-    <div id="hero-question"><!-- Agent's first question goes here --></div>
+    <div id="hero-question"></div>
     <div id="hero-input-area">
       <div class="input-wrap">
         <textarea id="hero-input" class="input-field" placeholder="Type here…" rows="1"
-          onkeydown="handleKey(event, 'hero')"
+          onkeydown="handleKey(event,'hero')"
           oninput="autoResize(this)"></textarea>
         <span class="send-hint">↵ send</span>
       </div>
     </div>
   </div>
 
-  <!-- Messages — shown once chat starts -->
-  <div id="messages">
-    <div id="typing"><span></span><span></span><span></span></div>
+  <!-- Single-exchange display (chat mode) -->
+  <div id="exchange">
+    <div id="user-turn"></div>
+    <div id="agent-turn">
+      <div id="typing"><span></span><span></span><span></span></div>
+    </div>
   </div>
 
-  <!-- Bottom input — shown once chat starts -->
+  <!-- Bottom input (chat mode) -->
   <div id="chat-input-area">
     <div class="input-wrap">
       <textarea id="chat-input" class="input-field" placeholder="Type here…" rows="1"
-        onkeydown="handleKey(event, 'chat')"
+        onkeydown="handleKey(event,'chat')"
         oninput="autoResize(this)"></textarea>
       <span class="send-hint">↵ send</span>
     </div>
   </div>
 
 </div>
-
 <script>
-// ── CONFIG ────────────────────────────────────────────────────────
 const PROXY = 'https://ethan-expert-proxy.threedwag.workers.dev';
-
 const SYSTEM_PROMPT_FALLBACK = `You are EthanExpert — a deeply informed AI representative for Ethan Watters, American journalist and author (Crazy Like Us, Urban Tribes, Making Monsters). Answer questions about his work, career, ideas, and opportunities. Be warm, precise, evidence-based. Never invent facts.`;
 
-// ── STATE ─────────────────────────────────────────────────────────
 let systemPrompt = SYSTEM_PROMPT_FALLBACK;
 let currentMode  = 'curious';
 let history      = [];
 let busy         = false;
 let chatStarted  = false;
+let flowState    = 'waiting_topic';
 
 const PERSONAS = [
   { key: 'curious',      label: 'Curious reader' },
@@ -251,75 +254,56 @@ const PERSONAS = [
   { key: 'other',        label: 'Something else' },
 ];
 
-let flowState = 'waiting_topic';
-let userTopic = '';
-
 // ── INIT ──────────────────────────────────────────────────────────
 async function init() {
   if (new URLSearchParams(window.location.search).has('secret-agent-ethan')) {
-    window.location.href = '/admin.html';
-    return;
+    window.location.href = '/admin.html'; return;
   }
-
   try {
-    const res  = await fetch(`${PROXY}/config`);
+    const res = await fetch(`${PROXY}/config`);
     const { config } = await res.json();
     if (config?.system_prompt) systemPrompt = config.system_prompt;
-  } catch (e) { /* use fallback */ }
+  } catch (e) {}
 
-  // Show first question in the hero
   await heroSays("What do you want to know?");
   document.getElementById('hero-input').focus();
 }
 
-// ── HERO MODE ─────────────────────────────────────────────────────
+// ── HERO ──────────────────────────────────────────────────────────
 async function heroSays(text, htmlExtra) {
-  showTypingHero(true);
-  await delay(420);
-  showTypingHero(false);
   const q = document.getElementById('hero-question');
+  q.innerHTML = '<div style="display:flex;gap:5px;align-items:center;height:1.5rem">' +
+    '<span style="width:5px;height:5px;background:var(--muted);border-radius:50%;animation:pulse 1.2s ease-in-out infinite"></span>'.repeat(3) +
+    '</div>';
+  await delay(420);
   q.innerHTML = renderMarkdown(text) + (htmlExtra || '');
 }
 
-function showTypingHero(on) {
-  // Reuse the typing indicator inside hero-question while waiting
-  const q = document.getElementById('hero-question');
-  if (on) q.innerHTML = '<div style="display:flex;gap:5px;align-items:center;height:1.5rem">' +
-    '<span style="width:5px;height:5px;background:var(--muted);border-radius:50%;animation:pulse 1.2s ease-in-out infinite"></span>'.repeat(3) +
-    '</div>';
-}
-
-// ── SWITCH FROM HERO TO CHAT LAYOUT ───────────────────────────────
+// ── SWITCH TO CHAT LAYOUT ─────────────────────────────────────────
 function switchToChatLayout() {
   if (chatStarted) return;
   chatStarted = true;
   document.getElementById('hero').classList.add('hidden');
   document.getElementById('header').classList.add('visible');
-  document.getElementById('messages').classList.add('visible');
+  document.getElementById('exchange').classList.add('visible');
   document.getElementById('chat-input-area').classList.add('visible');
   document.getElementById('chat-input').focus();
 }
 
-// ── INPUT HANDLING ────────────────────────────────────────────────
-function handleKey(e, source) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    submit(source);
-  }
+// ── INPUT ─────────────────────────────────────────────────────────
+function handleKey(e, src) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(src); }
 }
-
 function autoResize(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 128) + 'px';
 }
-
-async function submit(source) {
+async function submit(src) {
   if (busy) return;
-  const el = document.getElementById(source === 'hero' ? 'hero-input' : 'chat-input');
+  const el = document.getElementById(src === 'hero' ? 'hero-input' : 'chat-input');
   const text = el.value.trim();
   if (!text) return;
-  el.value = '';
-  el.style.height = 'auto';
+  el.value = ''; el.style.height = 'auto';
   await handleUserInput(text);
 }
 
@@ -328,23 +312,21 @@ async function handleUserInput(text) {
   busy = true;
 
   if (flowState === 'waiting_topic') {
-    userTopic = text;
-    // Switch layout before showing any messages
     switchToChatLayout();
-    userSaid(text);
+    showUserTurn(text);
     history.push({ role: 'user', content: text });
     flowState = 'waiting_persona';
-    await agentSays("Who are you?", buildPersonaChoices());
+    await showAgentTurn("Who are you?", buildPersonaChoices());
 
   } else if (flowState === 'waiting_persona') {
-    userSaid(text);
+    showUserTurn(text);
     setPersonaFromText(text);
     history.push({ role: 'user', content: text });
     flowState = 'chatting';
     await sendToAgent();
 
   } else {
-    userSaid(text);
+    showUserTurn(text);
     history.push({ role: 'user', content: text });
     await sendToAgent();
   }
@@ -352,20 +334,50 @@ async function handleUserInput(text) {
   busy = false;
 }
 
+// ── EXCHANGE DISPLAY ──────────────────────────────────────────────
+function showUserTurn(text) {
+  const u = document.getElementById('user-turn');
+  u.textContent = text;
+  u.classList.remove('fade');
+  u.classList.add('show');
+}
+
+async function showAgentTurn(text, htmlExtra) {
+  // Fade out user turn
+  const u = document.getElementById('user-turn');
+  u.classList.add('fade');
+
+  // Show typing
+  const a = document.getElementById('agent-turn');
+  a.classList.remove('show');
+  document.getElementById('typing').style.display = 'flex';
+  await delay(500);
+
+  // Render response
+  document.getElementById('typing').style.display = 'none';
+  a.innerHTML = renderMarkdown(text) + (htmlExtra || '');
+  // Re-append typing (hidden) so it stays available
+  const typingEl = document.createElement('div');
+  typingEl.id = 'typing';
+  typingEl.style.display = 'none';
+  typingEl.innerHTML = '<span></span><span></span><span></span>';
+  a.appendChild(typingEl);
+
+  a.classList.add('show');
+}
+
 function buildPersonaChoices() {
   return '<div class="persona-choices">' +
     PERSONAS.map(p =>
       `<button class="persona-choice" onclick="choosePersona('${p.key}','${escapeAttr(p.label)}')">${p.label}</button>`
-    ).join('') +
-    '</div>';
+    ).join('') + '</div>';
 }
 
 async function choosePersona(key, label) {
   if (busy) return;
   busy = true;
-  document.querySelectorAll('.persona-choices').forEach(el => el.remove());
   currentMode = key;
-  userSaid(label);
+  showUserTurn(label);
   history.push({ role: 'user', content: label });
   flowState = 'chatting';
   await sendToAgent();
@@ -375,15 +387,19 @@ async function choosePersona(key, label) {
 function setPersonaFromText(text) {
   const t = text.toLowerCase();
   for (const p of PERSONAS) {
-    if (t.includes(p.key) || t.includes(p.label.toLowerCase())) {
-      currentMode = p.key; return;
-    }
+    if (t.includes(p.key) || t.includes(p.label.toLowerCase())) { currentMode = p.key; return; }
   }
 }
 
 // ── AGENT CALL ────────────────────────────────────────────────────
 async function sendToAgent() {
-  showTyping(true);
+  // Show typing in agent turn
+  const u = document.getElementById('user-turn');
+  u.classList.add('fade');
+  const a = document.getElementById('agent-turn');
+  a.classList.remove('show');
+  document.getElementById('typing').style.display = 'flex';
+
   document.getElementById('chat-input').disabled = true;
   try {
     const res = await fetch(PROXY, {
@@ -396,55 +412,20 @@ async function sendToAgent() {
         max_tokens: 1500,
       }),
     });
-    showTyping(false);
     const data = await res.json();
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
     const reply = data.content?.[0]?.text || '(no response)';
     history.push({ role: 'assistant', content: reply });
-    agentSaid(reply);
+    await showAgentTurn(reply);
   } catch (e) {
-    showTyping(false);
-    agentSaid(`*Something went wrong — ${e.message}*`);
+    await showAgentTurn(`*Something went wrong — ${e.message}*`);
   } finally {
     document.getElementById('chat-input').disabled = false;
     document.getElementById('chat-input').focus();
   }
 }
 
-// ── DOM HELPERS ───────────────────────────────────────────────────
-function msgEl(role, html) {
-  const d = document.createElement('div');
-  d.className = 'msg ' + role;
-  const t = document.createElement('div');
-  t.className = 'msg-text';
-  t.innerHTML = html;
-  d.appendChild(t);
-  return d;
-}
-
-function appendMsg(el) {
-  const msgs = document.getElementById('messages');
-  const typing = document.getElementById('typing');
-  msgs.insertBefore(el, typing);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-function userSaid(text)  { appendMsg(msgEl('user',  escapeHtml(text))); }
-function agentSaid(text) { appendMsg(msgEl('agent', renderMarkdown(text))); }
-
-async function agentSays(text, htmlExtra) {
-  showTyping(true);
-  await delay(420);
-  showTyping(false);
-  appendMsg(msgEl('agent', renderMarkdown(text) + (htmlExtra || '')));
-}
-
-function showTyping(on) {
-  document.getElementById('typing').style.display = on ? 'flex' : 'none';
-  if (on) document.getElementById('messages').scrollTop = 99999;
-}
-
-// ── UTILITIES ─────────────────────────────────────────────────────
+// ── UTILS ─────────────────────────────────────────────────────────
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escapeAttr(t) { return t.replace(/'/g,"&#39;").replace(/"/g,'&quot;'); }
@@ -463,7 +444,7 @@ function renderMarkdown(text) {
       para = para.trim();
       if (!para) return '';
       if (/^<(h3|ul|blockquote)/.test(para)) return para;
-      return `<p>${para.replace(/\n/g, '<br>')}</p>`;
+      return `<p>${para.replace(/\n/g,'<br>')}</p>`;
     })
     .join('');
 }
