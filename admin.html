@@ -225,8 +225,37 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
 #abQList {
   display: flex; flex-wrap: wrap; gap: 0.35rem;
   padding: 0 0.85rem 0.65rem;
-  max-height: 96px; overflow-y: auto;
+  max-height: 80px; overflow-y: auto;
 }
+#abQEditWrap {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0 0.85rem 0.65rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+}
+#abQEdit {
+  flex: 1;
+  height: 72px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  resize: vertical;
+  background: #fff;
+  color: var(--ink);
+}
+#abQEdit:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#abQSaveBtn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.76rem; font-weight: 600;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 4px; cursor: pointer;
+  white-space: nowrap; flex-shrink: 0;
+}
+#abQSaveBtn:hover { background: var(--accent-warm); }
 .ab-q-btn {
   padding: 0.3rem 0.65rem;
   font-size: 0.78rem; line-height: 1.35;
@@ -363,10 +392,16 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
         <div id="abQBarTop">
           <h4>Questions</h4>
           <span id="abPersonaLabel">Curious visitor</span>
-          <button id="abGenBtn" onclick="abGenerateQuestions()">⟳ Generate 10</button>
+          <button id="abGenBtn" onclick="abGenerateQuestions()">⟳ Regenerate</button>
         </div>
+        <!-- Click-to-run pills -->
         <div id="abQList">
-          <span class="ab-q-empty">Click "Generate 10" to create questions for this persona.</span>
+          <span class="ab-q-empty">Loading…</span>
+        </div>
+        <!-- Editable textarea — always visible so Ethan can manually tweak -->
+        <div id="abQEditWrap">
+          <textarea id="abQEdit" placeholder="One question per line — edit freely, then click Save"></textarea>
+          <button id="abQSaveBtn" onclick="abSaveQuestions()">Save questions</button>
         </div>
       </div>
 
@@ -423,7 +458,7 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
   document.getElementById(name + 'Page').classList.add('visible');
   btn.classList.add('active');
-  if (name === 'ab' && !abLivePrompt) abLoadLivePrompt();
+  if (name === 'ab' && !abLivePrompt) abLoadQuestions();
   if (name === 'chat') document.getElementById('chatInput').focus();
 }
 
@@ -509,7 +544,7 @@ async function chatSend() {
 
 // ── A/B TESTER ────────────────────────────────────────────────────
 let abPersona = 'curious';
-let abQuestionCache = {};
+let abQuestionCache = {};  // persona -> [questions], loaded from KV + editable
 let abLivePrompt = '';
 
 const AB_PERSONA_LABELS = {
@@ -536,7 +571,6 @@ function abSidebarPersona(persona, btn) {
   btn.classList.add('active');
   document.getElementById('abPersonaLabel').textContent = AB_PERSONA_LABELS[persona];
   abRenderQuestions();
-  // Also switch to A/B page if not already there
   if (!document.getElementById('abPage').classList.contains('visible')) {
     showPage('ab', document.getElementById('nav-ab'));
     document.getElementById('nav-chat').classList.remove('active');
@@ -545,14 +579,55 @@ function abSidebarPersona(persona, btn) {
 
 function abRenderQuestions() {
   const list = document.getElementById('abQList');
+  const edit = document.getElementById('abQEdit');
   const qs = abQuestionCache[abPersona];
   if (!qs || !qs.length) {
-    list.innerHTML = '<span class="ab-q-empty">Click "Generate 10" to create questions for this persona.</span>';
+    list.innerHTML = '<span class="ab-q-empty">No questions yet — click Regenerate or type them in below.</span>';
+    edit.value = '';
     return;
   }
   list.innerHTML = qs.map(q =>
     `<button class="ab-q-btn" onclick="abRunQuestion(this,${JSON.stringify(q)})">${q}</button>`
   ).join('');
+  edit.value = qs.join('\n');
+}
+
+// Load ab_questions from KV on page open
+async function abLoadQuestions() {
+  try {
+    const res = await fetch(`${PROXY}/config`);
+    const { config } = await res.json();
+    if (config?.ab_questions && typeof config.ab_questions === 'object') {
+      // Merge into cache (KV has { persona: [q,q,q] })
+      Object.assign(abQuestionCache, config.ab_questions);
+    }
+    abLivePrompt = config?.system_prompt || '';
+    document.getElementById('abDraftPrompt').value = abLivePrompt;
+  } catch (e) { /* silent */ }
+  abRenderQuestions();
+}
+
+// Save current textarea content for this persona to KV
+async function abSaveQuestions() {
+  const raw = document.getElementById('abQEdit').value.trim();
+  const qs = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  abQuestionCache[abPersona] = qs;
+  abRenderQuestions();
+
+  const saveBtn = document.getElementById('abQSaveBtn');
+  saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
+  try {
+    const res = await fetch(`${PROXY}/admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPw },
+      body: JSON.stringify({ ab_questions: abQuestionCache }),
+    });
+    const data = await res.json();
+    saveBtn.textContent = data.ok ? '✓ Saved' : '✗ Error';
+    setTimeout(() => { saveBtn.textContent = 'Save questions'; saveBtn.disabled = false; }, 1800);
+  } catch (e) {
+    saveBtn.textContent = '✗ Error'; saveBtn.disabled = false;
+  }
 }
 
 async function abGenerateQuestions() {
@@ -577,11 +652,17 @@ async function abGenerateQuestions() {
       .slice(0, 10);
     abQuestionCache[abPersona] = questions;
     abRenderQuestions();
+    // Auto-save to KV
+    await fetch(`${PROXY}/admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPw },
+      body: JSON.stringify({ ab_questions: abQuestionCache }),
+    });
   } catch (e) {
     document.getElementById('abQList').innerHTML =
       `<span class="ab-q-empty" style="color:#c0392b">Error: ${e.message}</span>`;
   } finally {
-    btn.textContent = '⟳ Generate 10'; btn.disabled = false;
+    btn.textContent = '⟳ Regenerate'; btn.disabled = false;
   }
 }
 
@@ -589,7 +670,7 @@ async function abLoadLivePrompt() {
   try {
     const res = await fetch(`${PROXY}/config`);
     const { config } = await res.json();
-    abLivePrompt = config.system_prompt || '';
+    abLivePrompt = config?.system_prompt || '';
     document.getElementById('abDraftPrompt').value = abLivePrompt;
   } catch (e) { /* silent */ }
 }
