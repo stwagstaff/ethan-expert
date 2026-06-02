@@ -293,31 +293,46 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
 .ab-qlabel { font-size: 0.73rem; color: var(--ink-faint); margin-bottom: 0.6rem; font-style: italic; }
 
 /* Prompt bar — bottom strip */
-#abPromptBar {
-  border-top: 1px solid var(--border);
-  background: #fffbf7;
+/* Prompt sub-panel inside each column — lower third */
+.ab-col-prompt {
   flex-shrink: 0;
-  display: flex; align-items: flex-start; gap: 0.6rem;
-  padding: 0.6rem 0.85rem;
+  height: 33%;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-#abPromptBar label {
-  font-size: 0.68rem; font-weight: 700;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--ink-faint); flex-shrink: 0; padding-top: 0.35rem;
+.ab-col-prompt-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  background: var(--surface-2);
 }
-#abDraftPrompt {
-  flex: 1; height: 68px;
-  border: 1px solid var(--border); border-radius: 4px;
-  padding: 0.45rem 0.65rem;
-  font-size: 0.78rem; font-family: var(--font-mono);
-  resize: vertical; background: #fff;
+.ab-prompt-textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.76rem;
+  font-family: var(--font-mono);
+  resize: none;
+  background: #fff;
+  color: var(--ink);
+  line-height: 1.5;
 }
-#abDraftPrompt:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-#abPromptActions { display: flex; flex-direction: column; gap: 0.3rem; flex-shrink: 0; }
-#abPromptActions button {
-  padding: 0.32rem 0.65rem; font-size: 0.75rem; font-weight: 600;
-  border-radius: 4px; cursor: pointer; white-space: nowrap; border: none;
+.ab-prompt-textarea[readonly] {
+  background: #faf9f7;
+  color: var(--ink-muted);
+  cursor: default;
 }
+.ab-prompt-textarea:focus { outline: none; }
 .ab-load-btn { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border) !important; }
 .ab-promote-btn { background: #27ae60; color: #fff; }
 .ab-promote-btn:hover { background: #219a52; }
@@ -405,12 +420,17 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
         </div>
       </div>
 
-      <!-- Side-by-side responses -->
+      <!-- Side-by-side response + prompt columns -->
       <div id="abColumns">
         <div class="ab-col">
           <div class="ab-col-head a-head">A — Live prompt</div>
           <div class="ab-col-body" id="abColA">
             <span class="ab-placeholder">Pick a question above to run a comparison.</span>
+          </div>
+          <div class="ab-col-prompt">
+            <div class="ab-col-prompt-label">Live prompt</div>
+            <textarea id="abLivePromptView" class="ab-prompt-textarea" readonly
+                      placeholder="Live prompt loads here…"></textarea>
           </div>
         </div>
         <div class="ab-col">
@@ -418,17 +438,17 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
           <div class="ab-col-body" id="abColB">
             <span class="ab-placeholder">Pick a question above to run a comparison.</span>
           </div>
-        </div>
-      </div>
-
-      <!-- B prompt bar -->
-      <div id="abPromptBar">
-        <label>B Draft</label>
-        <textarea id="abDraftPrompt"
-                  placeholder="Paste or edit a draft system prompt here — leave blank to use the live prompt for both columns…"></textarea>
-        <div id="abPromptActions">
-          <button class="ab-load-btn" onclick="abLoadLivePrompt()">↓ Load live</button>
-          <button class="ab-promote-btn" onclick="abPromoteB()">✓ Promote B → Live</button>
+          <div class="ab-col-prompt">
+            <div class="ab-col-prompt-label">
+              Draft prompt
+              <span style="float:right;display:flex;gap:0.4rem;">
+                <button class="ab-load-btn" onclick="abLoadLivePrompt()">↓ Copy live</button>
+                <button class="ab-promote-btn" onclick="abPromoteB()">✓ Promote → Live</button>
+              </span>
+            </div>
+            <textarea id="abDraftPrompt" class="ab-prompt-textarea"
+                      placeholder="Paste or edit a draft system prompt here…"></textarea>
+          </div>
         </div>
       </div>
 
@@ -601,13 +621,27 @@ async function abLoadQuestions() {
     const res = await fetch(`${PROXY}/config`);
     const { config } = await res.json();
     if (config?.ab_questions && typeof config.ab_questions === 'object') {
-      // Merge into cache (KV has { persona: [q,q,q] })
       Object.assign(abQuestionCache, config.ab_questions);
     }
     abLivePrompt = config?.system_prompt || '';
-    document.getElementById('abDraftPrompt').value = abLivePrompt;
+    // Show live prompt in both the view pane and seed the draft if empty
+    const liveView = document.getElementById('abLivePromptView');
+    if (liveView) liveView.value = abLivePrompt;
+    const draft = document.getElementById('abDraftPrompt');
+    if (draft && !draft.value) draft.value = abLivePrompt;
   } catch (e) { /* silent */ }
   abRenderQuestions();
+}
+
+async function abLoadLivePrompt() {
+  try {
+    const res = await fetch(`${PROXY}/config`);
+    const { config } = await res.json();
+    abLivePrompt = config?.system_prompt || '';
+    const liveView = document.getElementById('abLivePromptView');
+    if (liveView) liveView.value = abLivePrompt;
+    document.getElementById('abDraftPrompt').value = abLivePrompt;
+  } catch (e) { /* silent */ }
 }
 
 // Save current textarea content for this persona to KV
