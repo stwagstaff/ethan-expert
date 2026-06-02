@@ -1384,7 +1384,6 @@ function renderMarkdown(text) {
 // DEBUG TEST
 // ══════════════════════════════════════════════
 async function testAPI() {
-  const key = sessionStorage.getItem('ew_api_key') || '';
   const status = document.getElementById('apiStatus');
   status.textContent = '⏳ Testing...';
   status.className = 'api-status';
@@ -1395,8 +1394,6 @@ async function testAPI() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
