@@ -1428,8 +1428,8 @@ function init() {
     .catch(() => {}) // silent fail — hardcoded defaults remain
     .finally(() => renderQuickQuestions());
 
-  // Open admin panel if ?admin in URL
-  if (new URLSearchParams(window.location.search).has('admin')) {
+  // Open admin panel if ?secret-agent-ethan in URL
+  if (new URLSearchParams(window.location.search).has('secret-agent-ethan')) {
     openAdmin();
   } else {
     renderQuickQuestions();
