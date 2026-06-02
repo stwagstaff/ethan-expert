@@ -36,7 +36,7 @@ function json(data, status = 200, origin = '') {
   });
 }
 
-const CONFIG_KEYS = ['system_prompt', 'tagline', 'subtitle', 'welcome_message', 'quick_questions', 'ab_questions', 'knowledge_base', 'knowledge_base_pending'];
+const CONFIG_KEYS = ['system_prompt', 'tagline', 'subtitle', 'welcome_message', 'quick_questions', 'ab_questions', 'knowledge_base', 'knowledge_base_pending', 'negative_prompt'];
 
 async function getConfig(env) {
   const result = {};
@@ -70,6 +70,11 @@ async function saveConfig(env, data) {
 
 // ── Tool definitions for the admin agent ─────────────────────────
 const ADMIN_TOOLS = [
+  {
+    name: 'get_current_config',
+    description: `Fetch the current live config from KV. Returns all fields: system_prompt, knowledge_base (full text), knowledge_base_pending, negative_prompt, tagline, subtitle, welcome_message, quick_questions, ab_questions. Use this when Ethan asks to view, read, or check current content. Do NOT call this unless specifically needed — it loads the full KB which is large.`,
+    input_schema: { type: 'object', properties: {} },
+  },
   {
     name: 'save_config',
     description: `Save one or more config fields to the live site. Only call this AFTER the user has explicitly confirmed the change. Fields you can save:
@@ -107,6 +112,17 @@ Only include fields you are actually changing.`,
     description: `Merge the pending knowledge additions into the main knowledge base document, then clear the pending queue. Call this when Ethan clicks "Promote" or asks to commit/finalize pending changes. This reconciles the two documents into one.`,
     input_schema: { type: 'object', properties: {} },
   },
+  {
+    name: 'append_negative',
+    description: `Append a debunked false claim to the Negative Prompt document. Use this whenever Ethan corrects a false fact — e.g. a wrong affiliation, wrong school, wrong degree. The entry should be a short declarative sentence of what is FALSE, e.g. "Ethan Watters does NOT have a master's degree from UC Berkeley." Always pair this with append_knowledge to queue the removal of that false claim from the KB as well (if it appears there). Confirm with Ethan before calling.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'The false claim to record, written as a clear denial. E.g. "Ethan Watters is NOT affiliated with Lucid Minds."' },
+      },
+      required: ['text'],
+    },
+  },
 ];
 
 function buildAdminSystemPrompt(config) {
@@ -117,6 +133,7 @@ You have access to tools:
 - save_config: save behavior prompt, tagline, subtitle, welcome message, quick questions
 - append_knowledge: add new facts to the pending KB queue WITHOUT reading the full KB (fast)
 - promote_knowledge: merge pending KB additions into the main KB document and clear the queue
+- append_negative: add a debunked false claim to the Negative Prompt document
 
 YOUR ROLE:
 - Help Ethan tune how his AI representative speaks, what it knows, and how it presents itself
@@ -125,7 +142,7 @@ YOUR ROLE:
 - Never save anything without his explicit "yes", "looks good", "save it", or equivalent confirmation
 - Be conversational, collaborative, and clear — this is a creative editorial partnership
 
-TWO SEPARATE DOCUMENTS — keep them distinct:
+THREE SEPARATE DOCUMENTS — keep them distinct, with a strict priority hierarchy:
 
 1. BEHAVIOR PROMPT (system_prompt) — HOW the agent thinks and speaks.
    Tone, persona, reasoning style, follow-up logic, rules of engagement.
@@ -136,8 +153,25 @@ TWO SEPARATE DOCUMENTS — keep them distinct:
    Ethan can add new facts, correct errors, or expand sections here.
    Does NOT contain behavioral instructions.
 
+3. RECENT UPDATES / PENDING (knowledge_base_pending) — NEW facts not yet reconciled into the KB.
+   OVERRIDE RULE: Any fact here takes precedence over conflicting information in the Knowledge Base.
+   Use this for fast corrections without a full KB edit. Promote to KB when stable.
+
+4. NEGATIVE PROMPT (negative_prompt) — WHAT IS FALSE.
+   ABSOLUTE OVERRIDE: Overrides ALL other sources — KB, pending, everything.
+   A list of debunked claims the agent must actively deny if they come up.
+   Populated by Ethan whenever he corrects a misinformation the AI has repeated.
+
+PRIORITY ORDER (highest wins): Negative Prompt > Pending Updates > Knowledge Base > Behavior Prompt
+
+DEBUNK WORKFLOW — when Ethan says something like "that's wrong" or "I never went there":
+  Step 1: append_negative — record the false claim as a clear denial
+  Step 2: append_knowledge — queue a correction or removal note for the KB
+  Step 3: Confirm with Ethan what was recorded
+
 When someone asks to change "how the agent responds" → edit system_prompt.
-When someone asks to add or correct facts about Ethan → edit knowledge_base.
+When someone asks to add or correct facts about Ethan → edit knowledge_base (via pending queue).
+When someone debunks a false claim → append_negative + append_knowledge together.
 
 OTHER EDITABLE FIELDS:
 - tagline — small text above the site name
@@ -153,6 +187,11 @@ ${config.system_prompt || '(not set)'}
 
 KNOWLEDGE BASE (knowledge_base):
 [${config.knowledge_base ? Math.round(config.knowledge_base.length / 1000) + 'K chars — use get_current_config to read or edit it. Do NOT load it unless Ethan specifically asks to view or change it.' : '(not set)'}]
+
+---
+
+NEGATIVE PROMPT (negative_prompt):
+${config.negative_prompt || '(empty — no false claims recorded yet)'}
 
 ---
 
@@ -274,6 +313,19 @@ async function handleAdminChat(request, env, origin) {
             toolResult = `Error promoting: ${e.message}`;
           }
 
+        } else if (toolUse.name === 'append_negative') {
+          const text = toolUse.input?.text || '';
+          try {
+            const existing = await env.CONFIG.get('negative_prompt') || '';
+            const timestamp = new Date().toISOString().slice(0, 10);
+            const entry = `[${timestamp}] ${text.trim()}`;
+            const updated = existing ? existing + '\n' + entry : entry;
+            await env.CONFIG.put('negative_prompt', updated);
+            toolResult = `Added to Negative Prompt: "${entry}". Remember to also use append_knowledge to queue removal of this from the KB if it appears there.`;
+          } catch (e) {
+            toolResult = `Error updating negative prompt: ${e.message}`;
+          }
+
         } else if (toolUse.name === 'save_config') {
           const fields = toolUse.input?.fields || {};
           try {
@@ -361,19 +413,22 @@ export default {
     catch { return json({ error: 'Invalid JSON' }, 400, origin); }
 
     if (!body.system) {
-      // Concatenate behavior prompt + knowledge base + pending additions
+      // Assemble system prompt with explicit source hierarchy:
+      // Behavior → KB → Pending (overrides KB) → Negative (overrides everything)
       const behavior  = await env.CONFIG.get('system_prompt');
       const knowledge = await env.CONFIG.get('knowledge_base');
       const pending   = await env.CONFIG.get('knowledge_base_pending');
-      let fullKB = knowledge || '';
-      if (pending) fullKB += '\n\n--- RECENT ADDITIONS (pending reconciliation) ---\n' + pending;
-      if (behavior && fullKB) {
-        body.system = behavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + fullKB;
-      } else if (behavior) {
-        body.system = behavior;
-      } else if (fullKB) {
-        body.system = fullKB;
-      }
+      const negative  = await env.CONFIG.get('negative_prompt');
+
+      let system = behavior || '';
+
+      if (knowledge) system += '\n\n---\n\nKNOWLEDGE BASE:\n\n' + knowledge;
+
+      if (pending) system += '\n\n---\n\nRECENT UPDATES — OVERRIDE RULE: The following information was added after the Knowledge Base was last reconciled. If any fact below conflicts with the Knowledge Base above, the information below takes precedence:\n\n' + pending;
+
+      if (negative) system += '\n\n---\n\nNEGATIVE PROMPT — ABSOLUTE OVERRIDE: The following claims are known to be FALSE. These override ALL other sources including the Knowledge Base and Recent Updates. Actively correct or deny any of these if they arise in conversation:\n\n' + negative;
+
+      if (system) body.system = system;
     }
 
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -382,6 +437,7 @@ export default {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'Cache-Control': 'no-store',
       },
       body: JSON.stringify(body),
     });

@@ -115,9 +115,13 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
    LOGIN
 ══════════════════════════════════════ */
 #loginScreen {
-  flex: 1; display: flex;
+  display: none;
+  flex: 1;
   align-items: center; justify-content: center;
   background: var(--surface);
+}
+#loginScreen.visible {
+  display: flex;
 }
 #loginBox {
   background: #fff; border: 1px solid var(--border);
@@ -271,11 +275,21 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
 #abColumns {
   display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;
 }
-.ab-col {
-  flex: 1; display: flex; flex-direction: column;
-  min-width: 0; border-right: 1px solid var(--border); overflow: hidden;
+#abResponseRow {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
-.ab-col:last-child { border-right: none; }
+.ab-resp-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+.ab-resp-col:last-child { border-right: none; }
 .ab-col-head {
   padding: 0.5rem 0.85rem;
   font-size: 0.68rem; font-weight: 700;
@@ -292,135 +306,35 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
 .ab-running { color: var(--ink-muted); font-style: italic; }
 .ab-qlabel { font-size: 0.73rem; color: var(--ink-faint); margin-bottom: 0.6rem; font-style: italic; }
 
-/* Prompt bar — bottom strip */
-/* Response columns — top half */
-#abResponseRow {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  border-bottom: 2px solid var(--border);
-  overflow: hidden;
-}
-.ab-resp-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  border-right: 1px solid var(--border);
-  overflow: hidden;
-}
-.ab-resp-col:last-child { border-right: none; }
-
-/* Document row — bottom half */
-#abDocRow {
-  display: flex;
-  height: 50%;
-  flex-shrink: 0;
-  overflow: hidden;
-  border-top: none;
-}
-.ab-doc-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-  border-right: 1px solid var(--border);
-}
-.ab-doc-col:last-child { border-right: none; }
-.ab-doc-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: var(--surface-2);
-  gap: 0.5rem;
-}
-#abKBSearch {
-  flex: 1;
-  max-width: 180px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.76rem;
-  font-family: var(--font-mono);
-  background: #fff;
-  color: var(--ink);
-}
-#abKBSearch:focus { outline: 1px solid var(--accent); }
-.ab-doc-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.78rem;
-  font-family: var(--font-mono);
-  line-height: 1.55;
-  color: var(--ink-muted);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.ab-doc-body mark {
-  background: #fff3a3;
-  color: var(--ink);
-  border-radius: 2px;
-}
-.ab-doc-textarea {
-  flex: 1;
-  border: none;
-  outline: none;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.78rem;
-  font-family: var(--font-mono);
-  line-height: 1.55;
-  resize: none;
-  background: #fff;
-  color: var(--ink);
-}
-.ab-load-btn { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border) !important; }
-.ab-promote-btn { background: #27ae60; color: #fff; }
-.ab-promote-btn:hover { background: #219a52; }
-
-/* ── CHAT PAGE — two-column layout ── */
-#chatPage {
-  display: flex;
+/* ── CHAT PAGE — left: conversation, right: tabbed panel ── */
+#chatPage.visible {
   flex-direction: row;
-  gap: 0;
-  overflow: hidden;
-  height: 100%;
 }
-#chatLeft {
-  flex: 1 1 0;
-  min-width: 0;
+#chatConvo {
+  flex: 0 0 50%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   border-right: 1px solid var(--border);
-  overflow: hidden;
 }
-#chatRight {
-  flex: 0 0 360px;
+#chatPanel {
+  flex: 0 0 50%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--surface-1);
 }
-#chatPanelTabs {
+#chatTabBar {
   display: flex;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
 }
 .cpanel-tab {
   flex: 1;
   background: var(--surface-2);
   border: none;
   border-right: 1px solid var(--border);
-  padding: 0.5rem 0.75rem;
+  padding: 0.55rem 0.75rem;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.07em;
@@ -510,6 +424,19 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
   max-height: 200px;
   color: var(--ink);
 }
+.cpanel-negative-text {
+  background: #fff5f5;
+  color: #c0392b;
+  font-family: var(--font-mono);
+}
+.cpanel-textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: #fff;
+  color: var(--ink);
+}
 
 </style>
 </head>
@@ -535,6 +462,11 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
     </button>
 
     <div class="nav-divider"></div>
+    <a class="nav-link" href="https://ethan-expert.pages.dev/" target="_blank" rel="noopener">
+      <span class="icon">🌐</span> EthanExpert
+    </a>
+
+    <div class="nav-divider"></div>
     <div class="sidebar-section-label">Personas</div>
     <button class="persona-link active" onclick="abSidebarPersona('curious',this)">Inquiring mind</button>
     <button class="persona-link" onclick="abSidebarPersona('publisher',this)">Publisher</button>
@@ -548,7 +480,7 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
   <div id="main">
 
     <!-- LOGIN -->
-    <div id="loginScreen">
+    <div id="loginScreen" class="visible">
       <div id="loginBox">
         <h2>🔐 Admin Login</h2>
         <div>
@@ -561,11 +493,11 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
       </div>
     </div>
 
-    <!-- CHAT PAGE — two-column: chat left, KB+Behavior panel right -->
+    <!-- CHAT PAGE — left: conversation, right: tabbed panel (KB | Behavior) -->
     <div class="page" id="chatPage">
 
       <!-- LEFT: conversation -->
-      <div id="chatLeft">
+      <div id="chatConvo">
         <div id="chatMessages">
           <div id="chatTyping">Thinking…</div>
         </div>
@@ -578,19 +510,20 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
       </div>
 
       <!-- RIGHT: tabbed panel -->
-      <div id="chatRight">
-        <div id="chatPanelTabs">
-          <button class="cpanel-tab active" id="tabKB" onclick="chatPanelTab('kb',this)">Knowledge Base</button>
-          <button class="cpanel-tab" id="tabBehavior" onclick="chatPanelTab('behavior',this)">Behavior Prompt</button>
+      <div id="chatPanel">
+        <div id="chatTabBar">
+          <button class="cpanel-tab active" id="tabKB"       onclick="chatTab('kb',this)">📚 Knowledge Base</button>
+          <button class="cpanel-tab"        id="tabBehavior" onclick="chatTab('behavior',this)">🧠 Behavior</button>
+          <button class="cpanel-tab"        id="tabNegative" onclick="chatTab('negative',this)">🚫 Negative</button>
         </div>
 
-        <!-- KB tab -->
+        <!-- Tab: Knowledge Base -->
         <div class="cpanel-body" id="cpanelKB">
           <div class="cpanel-toolbar">
             <input id="chatKBSearch" type="text" placeholder="Search KB…" oninput="chatKBHighlight(this.value)">
             <span id="chatPendingBadge" class="pending-badge" style="display:none">● pending</span>
-            <button class="cpanel-btn promote-btn" id="chatPromoteBtn" onclick="chatPromoteKB()" style="display:none">↑ Promote pending</button>
-            <button class="cpanel-btn" onclick="chatLoadKB()">↻ Refresh</button>
+            <button class="cpanel-btn promote-btn" id="chatPromoteBtn" onclick="chatPromoteKB()" style="display:none">↑ Promote</button>
+            <button class="cpanel-btn" onclick="chatLoadKB()">↻</button>
           </div>
           <div id="chatKBBody" class="cpanel-text">Loading…</div>
           <div id="chatPendingSection" style="display:none">
@@ -599,14 +532,25 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
           </div>
         </div>
 
-        <!-- Behavior tab -->
+        <!-- Tab: Behavior -->
         <div class="cpanel-body" id="cpanelBehavior" style="display:none">
           <div class="cpanel-toolbar">
             <button class="cpanel-btn" onclick="chatLoadBehavior()">↻ Refresh</button>
+            <button class="cpanel-btn promote-btn" onclick="chatPromoteBehavior()">✓ Promote → Live</button>
           </div>
-          <div id="chatBehaviorBody" class="cpanel-text">Loading…</div>
+          <textarea id="chatBehaviorBody" class="cpanel-text cpanel-textarea"
+                    placeholder="Loading behavior prompt…"></textarea>
+        </div>
+
+        <!-- Tab: Negative Prompt -->
+        <div class="cpanel-body" id="cpanelNegative" style="display:none">
+          <div class="cpanel-toolbar">
+            <button class="cpanel-btn" onclick="chatLoadNegative()">↻ Refresh</button>
+          </div>
+          <div id="chatNegativeBody" class="cpanel-text cpanel-negative-text">Loading…</div>
         </div>
       </div>
+
     </div>
 
     <!-- A/B PAGE -->
@@ -630,10 +574,8 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
         </div>
       </div>
 
-      <!-- Side-by-side response + prompt columns -->
+      <!-- Side-by-side response columns -->
       <div id="abColumns">
-
-        <!-- ── TOP HALF: responses ── -->
         <div id="abResponseRow">
           <div class="ab-resp-col">
             <div class="ab-col-head a-head">A — Live prompt</div>
@@ -647,36 +589,6 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
               <span class="ab-placeholder">Pick a question above to run a comparison.</span>
             </div>
           </div>
-        </div>
-
-        <!-- ── BOTTOM HALF: knowledge base (left) + draft behavior (right) ── -->
-        <div id="abDocRow">
-
-          <!-- Left: searchable knowledge base (read-only, live) -->
-          <div class="ab-doc-col" id="abKBCol">
-            <div class="ab-doc-head">
-              <span>Knowledge base</span>
-              <input id="abKBSearch" type="text" placeholder="Search…"
-                     oninput="abHighlightSearch(this.value)">
-            </div>
-            <div class="ab-doc-body" id="abKBBody">
-              <span class="ab-placeholder">Loading…</span>
-            </div>
-          </div>
-
-          <!-- Right: draft behavior prompt (editable) + promote -->
-          <div class="ab-doc-col" id="abDraftCol">
-            <div class="ab-doc-head">
-              <span>Draft behavior prompt</span>
-              <span style="display:flex;gap:0.4rem;">
-                <button class="ab-load-btn" onclick="abLoadLivePrompt()">↓ Copy live</button>
-                <button class="ab-promote-btn" onclick="abPromoteB()">✓ Promote → Live</button>
-              </span>
-            </div>
-            <textarea id="abDraftPrompt" class="ab-doc-textarea"
-                      placeholder="Edits made in the Chat Editor appear here automatically…"></textarea>
-          </div>
-
         </div>
       </div>
 
@@ -697,7 +609,7 @@ function signOut() {
   document.getElementById('loginErr').textContent = '';
   document.getElementById('signOutBtn').style.display = 'none';
   document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
-  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginScreen').classList.add('visible');
 }
 
 // ── PAGE ROUTING ─────────────────────────────────────────────────
@@ -707,7 +619,7 @@ function showPage(name, btn) {
   document.getElementById(name + 'Page').classList.add('visible');
   btn.classList.add('active');
   if (name === 'ab') abLoadQuestions();
-  if (name === 'chat') { document.getElementById('chatInput').focus(); chatLoadKB(); chatLoadBehavior(); }
+  if (name === 'chat') { document.getElementById('chatInput').focus(); chatLoadKB(); }
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────
@@ -725,7 +637,7 @@ async function doLogin() {
     if (res.status === 401) { err.textContent = 'Wrong password.'; return; }
     const data = await res.json();
     adminPw = pw;
-    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('loginScreen').classList.remove('visible');
     document.getElementById('signOutBtn').style.display = '';
     document.getElementById('chatPage').classList.add('visible');
     document.getElementById('nav-chat').classList.add('active');
@@ -733,9 +645,7 @@ async function doLogin() {
     abLoadQuestions();
     chatAddMsg('bot', data.reply || 'Hello! What would you like to change?');
     document.getElementById('chatInput').focus();
-    // Pre-load KB and behavior panels
     chatLoadKB();
-    chatLoadBehavior();
   } catch (e) { err.textContent = 'Error: ' + e.message; }
 }
 
@@ -797,12 +707,16 @@ async function chatSend() {
   }
 }
 
-// ── CHAT PANEL (KB + Behavior tabs) ────────────────────────────────
-function chatPanelTab(name, btn) {
-  document.querySelectorAll('.cpanel-tab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.cpanel-body').forEach(b => b.style.display = 'none');
+// ── CHAT PANEL (KB | Behavior | Negative tabs in right column) ────
+function chatTab(name, btn) {
+  document.querySelectorAll('#chatTabBar .cpanel-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#chatPanel .cpanel-body').forEach(b => b.style.display = 'none');
   btn.classList.add('active');
-  document.getElementById('cpanel' + name.charAt(0).toUpperCase() + name.slice(1)).style.display = 'flex';
+  const panelId = { kb: 'cpanelKB', behavior: 'cpanelBehavior', negative: 'cpanelNegative' }[name];
+  document.getElementById(panelId).style.display = 'flex';
+  if (name === 'kb')       chatLoadKB();
+  if (name === 'behavior') chatLoadBehavior();
+  if (name === 'negative') chatLoadNegative();
 }
 
 async function chatLoadKB() {
@@ -839,13 +753,52 @@ async function chatLoadKB() {
 }
 
 async function chatLoadBehavior() {
-  const body = document.getElementById('chatBehaviorBody');
+  const el = document.getElementById('chatBehaviorBody');
   try {
     const res  = await fetch(`${PROXY}/config`);
     const { config } = await res.json();
-    body.textContent = config.system_prompt || '(empty)';
+    el.value = config.system_prompt || '';
   } catch (e) {
-    body.textContent = 'Error loading behavior: ' + e.message;
+    el.value = 'Error loading behavior: ' + e.message;
+  }
+}
+
+async function chatPromoteBehavior() {
+  const el = document.getElementById('chatBehaviorBody');
+  const draft = el.value.trim();
+  if (!draft) { alert('Nothing to promote — behavior prompt is empty.'); return; }
+  if (!confirm('Promote this draft to the live behavior prompt? This takes effect immediately for all users.')) return;
+  const btn = document.querySelector('#cpanelBehavior .promote-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch(`${PROXY}/admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPw },
+      body: JSON.stringify({ system_prompt: draft }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      btn.textContent = '✓ Promoted!';
+      btn.style.background = '#27ae60';
+      setTimeout(() => { btn.textContent = '✓ Promote → Live'; btn.disabled = false; btn.style.background = ''; }, 2000);
+    } else {
+      alert('Error: ' + (data.error || 'Unknown'));
+      btn.disabled = false; btn.textContent = '✓ Promote → Live';
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false; btn.textContent = '✓ Promote → Live';
+  }
+}
+
+async function chatLoadNegative() {
+  const body = document.getElementById('chatNegativeBody');
+  try {
+    const res  = await fetch(`${PROXY}/config`);
+    const { config } = await res.json();
+    body.textContent = config.negative_prompt || '(empty — no false claims recorded yet)';
+  } catch (e) {
+    body.textContent = 'Error loading negative prompt: ' + e.message;
   }
 }
 
@@ -910,30 +863,8 @@ async function abLoadQuestions() {
     abLivePrompt = abLiveBehavior && fullKB
       ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + fullKB
       : abLiveBehavior || fullKB;
-    // Always update KB display
-    abRenderKB(abLiveKnowledge);
-    // Always update draft pane to match what was last saved in Chat Editor
-    const db = document.getElementById('abDraftPrompt');
-    if (db) db.value = abLiveBehavior;
-  } catch (e) { /* silent */ }
-  abRenderQuestions();
-}
-
-async function abLoadLivePrompt() {
-  try {
-    const res = await fetch(`${PROXY}/config`);
-    const { config } = await res.json();
-    abLiveBehavior  = config?.system_prompt  || '';
-    abLiveKnowledge = config?.knowledge_base || '';
-    abLivePrompt = abLiveBehavior && abLiveKnowledge
-      ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
-      : abLiveBehavior || abLiveKnowledge;
-    const bv = document.getElementById('abLiveBehaviorView');
-    if (bv) bv.value = abLiveBehavior;
-    const kv = document.getElementById('abLiveKBView');
-    if (kv) kv.value = abLiveKnowledge;
-    abRenderKB(abLiveKnowledge);
-    document.getElementById('abDraftPrompt').value = abLiveBehavior;
+    // Always update AB live prompt state
+    abRenderQuestions();
   } catch (e) { /* silent */ }
 }
 
@@ -981,28 +912,6 @@ function abRenderQuestions() {
     return `<button class="ab-q-btn" data-question="${escaped}" onclick="abRunQuestion(this, this.dataset.question)">${q}</button>`;
   }).join('');
   edit.value = qs.join('\n');
-}
-
-// Load ab_questions from KV on page open
-function abRenderKB(text) {
-  const el = document.getElementById('abKBBody');
-  if (!el) return;
-  el.textContent = text || '(empty)';
-}
-
-function abHighlightSearch(query) {
-  const el = document.getElementById('abKBBody');
-  if (!el) return;
-  const raw = abLiveKnowledge || '';
-  if (!query.trim()) { el.textContent = raw; return; }
-  // Escape for regex
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`(${escaped})`, 'gi');
-  el.innerHTML = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(re, '<mark>$1</mark>');
-  // Scroll to first match
-  const first = el.querySelector('mark');
-  if (first) first.scrollIntoView({ block: 'center' });
 }
 
 // Save current textarea content for this persona to KV
@@ -1089,26 +998,23 @@ async function abRunQuestion(btn, question) {
   btn.classList.add('running');
   const colA = document.getElementById('abColA');
   const colB = document.getElementById('abColB');
-  const draftBehavior = document.getElementById('abDraftPrompt').value.trim();
-  // A = live behavior + live KB (what users actually see)
+  // Both A and B use the live prompt — unique run IDs bust any server-side cache
   const liveFullPrompt = abLivePrompt;
-  // B = draft behavior + live KB (test behavior changes against same facts)
-  const draftFullPrompt = draftBehavior && abLiveKnowledge
-    ? draftBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
-    : draftBehavior || liveFullPrompt;
+  const runTs = new Date().toISOString();
 
   const label = `<div class="ab-qlabel">"${question}"</div>`;
   colA.innerHTML = label + '<div class="ab-running">Running A…</div>';
   colB.innerHTML = label + '<div class="ab-running">Running B…</div>';
 
-  async function call(prompt) {
+  async function call(prompt, runId) {
     const body = {
       model: 'claude-sonnet-4-6',
       messages: [{ role: 'user', content: question }],
       max_tokens: 800,
-      temperature: 0,   // deterministic — same prompt = same response
+      temperature: 0,
     };
-    if (prompt) body.system = prompt + `\n\n[USER MODE: ${abPersona}]`;
+    // Cache-bust: unique run ID + timestamp appended to system prompt
+    if (prompt) body.system = prompt + `\n\n[USER MODE: ${abPersona}] [RUN: ${runId} @ ${runTs}]`;
     const res = await fetch(PROXY, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1119,16 +1025,10 @@ async function abRunQuestion(btn, question) {
     return data.content?.[0]?.text || '(no response)';
   }
 
-  // If both prompts are identical, run only once and reuse the result
-  const samePrompt = draftFullPrompt === liveFullPrompt;
-  let rA, rB;
-  if (samePrompt) {
-    const single = await Promise.allSettled([call(liveFullPrompt)]);
-    rA = single[0];
-    rB = { status: rA.status, value: rA.value, reason: rA.reason };
-  } else {
-    [rA, rB] = await Promise.allSettled([call(liveFullPrompt), call(draftFullPrompt)]);
-  }
+  const [rA, rB] = await Promise.allSettled([
+    call(liveFullPrompt, 'A-' + Math.random().toString(36).slice(2)),
+    call(liveFullPrompt, 'B-' + Math.random().toString(36).slice(2)),
+  ]);
 
   colA.innerHTML = label + (rA.status === 'fulfilled'
     ? renderMarkdown(rA.value)
@@ -1137,31 +1037,6 @@ async function abRunQuestion(btn, question) {
     ? renderMarkdown(rB.value)
     : `<span style="color:#c0392b">Error: ${rB.reason?.message}</span>`);
   btn.classList.remove('running');
-}
-
-async function abPromoteB() {
-  const draftBehavior = document.getElementById('abDraftPrompt').value.trim();
-  if (!draftBehavior) { alert('No draft behavior prompt to promote.'); return; }
-  if (!confirm('Promote draft behavior prompt to live? This immediately affects all users.')) return;
-  try {
-    const res = await fetch(`${PROXY}/admin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPw },
-      body: JSON.stringify({ system_prompt: draftBehavior }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      abLiveBehavior = draftBehavior;
-      abLivePrompt = draftBehavior && abLiveKnowledge
-        ? draftBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
-        : draftBehavior || abLiveKnowledge;
-      const bHead = document.querySelector('.b-head');
-      const orig = bHead.innerHTML;
-      bHead.innerHTML = '✓ Promoted to live!';
-      bHead.style.cssText = 'background:#d5f5e3;color:#27ae60';
-      setTimeout(() => { bHead.innerHTML = orig; bHead.style.cssText = ''; }, 2500);
-    } else { alert('Error: ' + (data.error || 'Unknown')); }
-  } catch (e) { alert('Error: ' + e.message); }
 }
 </script>
 </body>
