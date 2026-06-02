@@ -428,9 +428,12 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
             <span class="ab-placeholder">Pick a question above to run a comparison.</span>
           </div>
           <div class="ab-col-prompt">
-              <div class="ab-col-prompt-label">Live behavior prompt</div>
-            <textarea id="abLivePromptView" class="ab-prompt-textarea" readonly
-                      placeholder="Live prompt loads here…"></textarea>
+              <div class="ab-col-prompt-label">Live — behavior prompt</div>
+              <textarea id="abLiveBehaviorView" class="ab-prompt-textarea" readonly
+                        placeholder="Behavior prompt loads here…" style="height:40%;border-bottom:1px solid var(--border)"></textarea>
+              <div class="ab-col-prompt-label" style="border-top:none">Live — knowledge base</div>
+              <textarea id="abLiveKBView" class="ab-prompt-textarea" readonly
+                        placeholder="Knowledge base loads here…" style="height:60%"></textarea>
           </div>
         </div>
         <div class="ab-col">
@@ -440,14 +443,17 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
           </div>
           <div class="ab-col-prompt">
             <div class="ab-col-prompt-label">
-              Draft behavior prompt
+              Draft — behavior prompt
               <span style="float:right;display:flex;gap:0.4rem;">
                 <button class="ab-load-btn" onclick="abLoadLivePrompt()">↓ Copy live</button>
                 <button class="ab-promote-btn" onclick="abPromoteB()">✓ Promote → Live</button>
               </span>
             </div>
             <textarea id="abDraftPrompt" class="ab-prompt-textarea"
-                      placeholder="Paste or edit a draft system prompt here…"></textarea>
+                      placeholder="Edit draft behavior prompt here…" style="height:40%;border-bottom:1px solid var(--border)"></textarea>
+            <div class="ab-col-prompt-label" style="border-top:none">Draft — knowledge base</div>
+            <textarea id="abDraftKB" class="ab-prompt-textarea"
+                      placeholder="Edit draft knowledge base here…" style="height:60%"></textarea>
           </div>
         </div>
       </div>
@@ -554,7 +560,8 @@ async function chatSend() {
     const reply = data.reply || 'No response.';
     chatHistory.push({ role: 'assistant', content: reply });
     chatAddMsg('bot', reply);
-    if (reply.toLowerCase().includes('saved')) abLoadQuestions().catch(() => {});
+    // Always reload AB state after any bot response — it may have saved something
+    abLoadQuestions().catch(() => {});
   } catch (e) {
     typing.style.display = 'none';
     chatAddNote('Error: ' + e.message);
@@ -580,15 +587,19 @@ async function abLoadQuestions() {
     }
     abLiveBehavior  = config?.system_prompt  || '';
     abLiveKnowledge = config?.knowledge_base || '';
-    // Full combined prompt for actual API calls
     abLivePrompt = abLiveBehavior && abLiveKnowledge
       ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
       : abLiveBehavior || abLiveKnowledge;
-    // Show only the behavior prompt in the UI panes — readable and editable
-    const liveView = document.getElementById('abLivePromptView');
-    if (liveView) liveView.value = abLiveBehavior;
-    const draft = document.getElementById('abDraftPrompt');
-    if (draft && !draft.value) draft.value = abLiveBehavior;
+    // Update live panes
+    const bv = document.getElementById('abLiveBehaviorView');
+    if (bv) bv.value = abLiveBehavior;
+    const kv = document.getElementById('abLiveKBView');
+    if (kv) kv.value = abLiveKnowledge;
+    // Seed draft panes if empty
+    const db = document.getElementById('abDraftPrompt');
+    if (db && !db.value) db.value = abLiveBehavior;
+    const dk = document.getElementById('abDraftKB');
+    if (dk && !dk.value) dk.value = abLiveKnowledge;
   } catch (e) { /* silent */ }
   abRenderQuestions();
 }
@@ -602,9 +613,12 @@ async function abLoadLivePrompt() {
     abLivePrompt = abLiveBehavior && abLiveKnowledge
       ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
       : abLiveBehavior || abLiveKnowledge;
-    const liveView = document.getElementById('abLivePromptView');
-    if (liveView) liveView.value = abLiveBehavior;
+    const bv = document.getElementById('abLiveBehaviorView');
+    if (bv) bv.value = abLiveBehavior;
+    const kv = document.getElementById('abLiveKBView');
+    if (kv) kv.value = abLiveKnowledge;
     document.getElementById('abDraftPrompt').value = abLiveBehavior;
+    document.getElementById('abDraftKB').value = abLiveKnowledge;
   } catch (e) { /* silent */ }
 }
 
@@ -740,12 +754,13 @@ async function abRunQuestion(btn, question) {
   const colA = document.getElementById('abColA');
   const colB = document.getElementById('abColB');
   const draftBehavior = document.getElementById('abDraftPrompt').value.trim();
-  // A = live behavior + KB (what users actually see)
+  const draftKB       = document.getElementById('abDraftKB').value.trim();
+  // A = live behavior + live KB (what users actually see)
   const liveFullPrompt = abLivePrompt;
-  // B = draft behavior + live KB (testing a behavior change against same facts)
-  const draftFullPrompt = draftBehavior && abLiveKnowledge
-    ? draftBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
-    : draftBehavior || liveFullPrompt;
+  // B = draft behavior + draft KB
+  const draftFullPrompt = draftBehavior && draftKB
+    ? draftBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + draftKB
+    : draftBehavior || draftKB || liveFullPrompt;
 
   const label = `<div class="ab-qlabel">"${question}"</div>`;
   colA.innerHTML = label + '<div class="ab-running">Running A…</div>';
@@ -791,22 +806,30 @@ async function abRunQuestion(btn, question) {
 
 async function abPromoteB() {
   const draftBehavior = document.getElementById('abDraftPrompt').value.trim();
-  if (!draftBehavior) { alert('No draft behavior prompt to promote.'); return; }
-  if (!confirm('Promote B behavior prompt to live? This immediately affects all users.')) return;
+  const draftKB       = document.getElementById('abDraftKB').value.trim();
+  if (!draftBehavior && !draftKB) { alert('Nothing to promote.'); return; }
+  const parts = [];
+  if (draftBehavior) parts.push('behavior prompt');
+  if (draftKB) parts.push('knowledge base');
+  if (!confirm(`Promote draft ${parts.join(' and ')} to live? This immediately affects all users.`)) return;
   try {
+    const payload = {};
+    if (draftBehavior) payload.system_prompt  = draftBehavior;
+    if (draftKB)       payload.knowledge_base = draftKB;
     const res = await fetch(`${PROXY}/admin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPw },
-      body: JSON.stringify({ system_prompt: draftBehavior }),  // promote behavior only, KB unchanged
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (data.ok) {
-      // Update local state
-      abLiveBehavior = draftBehavior;
-      abLivePrompt = draftBehavior && abLiveKnowledge
-        ? draftBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
-        : draftBehavior || abLiveKnowledge;
-      document.getElementById('abLivePromptView').value = draftBehavior;
+      if (draftBehavior) abLiveBehavior = draftBehavior;
+      if (draftKB)       abLiveKnowledge = draftKB;
+      abLivePrompt = abLiveBehavior && abLiveKnowledge
+        ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
+        : abLiveBehavior || abLiveKnowledge;
+      if (draftBehavior) { const bv = document.getElementById('abLiveBehaviorView'); if(bv) bv.value = draftBehavior; }
+      if (draftKB)       { const kv = document.getElementById('abLiveKBView');       if(kv) kv.value = draftKB; }
       const bHead = document.querySelector('.b-head');
       const orig = bHead.innerHTML;
       bHead.innerHTML = '✓ Promoted to live!';
