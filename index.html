@@ -573,6 +573,10 @@
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  transition: width 0.25s ease;
+}
+#adminPanel.ab-mode {
+  width: min(1100px, 97vw);
 }
 #adminHeader {
   padding: 1.25rem 1.5rem;
@@ -668,6 +672,217 @@
   border: none; border-radius: 6px;
   padding: 0 1rem; font-size: 0.9rem;
   font-weight: 600; cursor: pointer; flex-shrink: 0;
+}
+/* ── ADMIN TABS ── */
+#adminTabs {
+  display: none;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  padding: 0 1rem;
+  gap: 0;
+  flex-direction: row;
+}
+.admin-tab {
+  padding: 0.65rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.admin-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+/* ── A/B TESTER ── */
+#adminAB {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+#abPersonaBar {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.ab-persona-btn {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink-muted);
+  cursor: pointer;
+  text-transform: capitalize;
+}
+.ab-persona-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+#abBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+#abLeft {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#abLeft h4 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0.65rem 0.85rem 0.4rem;
+  flex-shrink: 0;
+}
+#abQuestions {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0.5rem 0.75rem;
+}
+.ab-q-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.82rem;
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+.ab-q-btn:hover { background: var(--surface-2); }
+.ab-q-btn.running { opacity: 0.5; pointer-events: none; }
+#abGenBtn {
+  margin: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+#abRight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+#abPromptBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: #fffbf7;
+}
+#abPromptBar label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+#abDraftPrompt {
+  flex: 1;
+  height: 60px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  resize: none;
+  background: #fff;
+}
+#abPromptActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+#abPromptActions button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ab-load-btn  { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border) !important; }
+.ab-promote-btn { background: #27ae60; color: #fff; }
+#abColumns {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.ab-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+.ab-col:last-child { border-right: none; }
+.ab-col-head {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.ab-col-head.a-head { color: #2980b9; background: #eef6fd; }
+.ab-col-head.b-head { color: #8b4513; background: #fdf3ee; }
+.ab-col-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+.ab-placeholder {
+  color: var(--ink-faint);
+  font-style: italic;
+  font-size: 0.82rem;
+}
+.ab-running { color: var(--ink-muted); font-style: italic; }
+.ab-question-label {
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  margin-bottom: 0.5rem;
+  font-style: italic;
 }
 </style>
 </head>
@@ -1595,7 +1810,9 @@ async function adminLogin() {
 
 function showAdminChat() {
   document.getElementById('adminLogin').style.display = 'none';
+  document.getElementById('adminTabs').style.display = 'flex';
   document.getElementById('adminChatWrap').style.display = 'flex';
+  document.getElementById('adminAB').style.display = 'none';
   document.getElementById('adminInput').focus();
 }
 
@@ -1680,6 +1897,191 @@ async function adminSend() {
   }
 }
 
+// ══════════════════════════════════════════════
+// A/B TEST PANEL
+// ══════════════════════════════════════════════
+let abPersona = 'curious';
+let abQuestionCache = {}; // persona -> [questions]
+let abLivePrompt = '';    // cached live prompt
+
+const AB_PERSONA_DESCRIPTIONS = {
+  curious:      'a curious general reader who has just discovered Ethan Watters and wants to understand who he is and what he has written',
+  publisher:    'a book publisher or literary agent evaluating Ethan as a potential author for a new project',
+  speaker:      'an event organizer or conference producer looking to book Ethan as a keynote speaker',
+  academic:     'an academic or researcher who has encountered his work and wants to understand its scholarly significance',
+  collaborator: 'a potential creative or professional collaborator exploring whether Ethan would be a good partner for a project',
+  recruiter:    'a recruiter or hiring manager considering Ethan for a senior editorial, strategy, or content role',
+};
+
+function adminSwitchTab(tab, btn) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  if (tab === 'chat') {
+    document.getElementById('adminChatWrap').style.display = 'flex';
+    document.getElementById('adminAB').style.display = 'none';
+    document.getElementById('adminPanel').classList.remove('ab-mode');
+  } else {
+    document.getElementById('adminChatWrap').style.display = 'none';
+    document.getElementById('adminAB').style.display = 'flex';
+    document.getElementById('adminPanel').classList.add('ab-mode');
+    // Pre-load live prompt if not cached
+    if (!abLivePrompt) abLoadLivePrompt();
+  }
+}
+
+function abSelectPersona(persona, btn) {
+  abPersona = persona;
+  document.querySelectorAll('.ab-persona-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  abRenderQuestions();
+}
+
+function abRenderQuestions() {
+  const container = document.getElementById('abQuestions');
+  const qs = abQuestionCache[abPersona];
+  if (!qs || !qs.length) {
+    container.innerHTML = '<div class="ab-placeholder" style="padding:0.5rem 0.6rem;font-size:0.8rem;">Click "Generate" to create questions for this persona.</div>';
+    return;
+  }
+  container.innerHTML = qs.map((q, i) =>
+    `<button class="ab-q-btn" onclick="abRunQuestion(this,'${escQ(q)}')">${q}</button>`
+  ).join('');
+}
+
+function escQ(s) { return s.replace(/'/g, "\\'").replace(/\n/g, ' '); }
+
+async function abGenerateQuestions() {
+  const btn = document.getElementById('abGenBtn');
+  btn.textContent = '⟳ Generating…';
+  btn.disabled = true;
+
+  const personaDesc = AB_PERSONA_DESCRIPTIONS[abPersona];
+  const apiKey = ''; // worker handles auth
+  try {
+    const res = await fetch(`${ADMIN_PROXY}/admin/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPassword },
+      body: JSON.stringify({
+        messages: [{
+          role: 'user',
+          content: `Generate exactly 10 realistic questions that ${personaDesc} would ask the EthanExpert AI. 
+Return ONLY a numbered list 1-10, one question per line, no extra commentary. Make them varied — some specific to his books, some about his career, some about opportunities.`,
+        }],
+      }),
+    });
+    const data = await res.json();
+    const raw = data.reply || '';
+    const questions = raw.split('\n')
+      .map(l => l.replace(/^\d+[\.\)]\s*/, '').trim())
+      .filter(l => l.length > 10)
+      .slice(0, 10);
+    abQuestionCache[abPersona] = questions;
+    abRenderQuestions();
+  } catch (e) {
+    document.getElementById('abQuestions').innerHTML =
+      `<div class="ab-placeholder" style="padding:0.5rem 0.6rem;color:#c0392b;">Error: ${e.message}</div>`;
+  } finally {
+    btn.textContent = '⟳ Generate 10 questions';
+    btn.disabled = false;
+  }
+}
+
+async function abLoadLivePrompt() {
+  try {
+    const res = await fetch(`${ADMIN_PROXY}/config`);
+    const { config } = await res.json();
+    abLivePrompt = config.system_prompt || SYSTEM_PROMPT;
+    document.getElementById('abDraftPrompt').value = abLivePrompt;
+  } catch (e) {
+    abLivePrompt = SYSTEM_PROMPT;
+    document.getElementById('abDraftPrompt').value = SYSTEM_PROMPT;
+  }
+}
+
+async function abRunQuestion(btn, question) {
+  // Mark running
+  document.querySelectorAll('.ab-q-btn').forEach(b => b.classList.remove('running'));
+  btn.classList.add('running');
+
+  const colA = document.getElementById('abColA');
+  const colB = document.getElementById('abColB');
+  const draftPrompt = document.getElementById('abDraftPrompt').value.trim();
+  const livePrompt = abLivePrompt || SYSTEM_PROMPT;
+
+  colA.innerHTML = `<div class="ab-question-label">"${question}"</div><div class="ab-running">Running A…</div>`;
+  colB.innerHTML = `<div class="ab-question-label">"${question}"</div><div class="ab-running">Running B…</div>`;
+
+  const modeNote = `\n\n[USER MODE: ${abPersona}]`;
+  const messages = [{ role: 'user', content: question }];
+
+  async function callWithPrompt(systemPrompt) {
+    const res = await fetch(`${ADMIN_PROXY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        system: systemPrompt + modeNote,
+        messages,
+        max_tokens: 800,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    return data.content?.[0]?.text || '(no response)';
+  }
+
+  const questionLabel = `<div class="ab-question-label">"${question}"</div>`;
+
+  // Run both in parallel
+  const [resultA, resultB] = await Promise.allSettled([
+    callWithPrompt(livePrompt),
+    callWithPrompt(draftPrompt || livePrompt),
+  ]);
+
+  colA.innerHTML = questionLabel + (resultA.status === 'fulfilled'
+    ? resultA.value
+    : `<span style="color:#c0392b">Error: ${resultA.reason?.message}</span>`);
+
+  colB.innerHTML = questionLabel + (resultB.status === 'fulfilled'
+    ? resultB.value
+    : `<span style="color:#c0392b">Error: ${resultB.reason?.message}</span>`);
+
+  btn.classList.remove('running');
+}
+
+async function abPromoteB() {
+  const draft = document.getElementById('abDraftPrompt').value.trim();
+  if (!draft) { alert('No draft prompt to promote — edit the B Prompt field first.'); return; }
+  if (!confirm('Promote the B prompt to live? This will immediately affect all users.')) return;
+
+  try {
+    const res = await fetch(`${ADMIN_PROXY}/admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPassword },
+      body: JSON.stringify({ system_prompt: draft }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      abLivePrompt = draft;
+      window._SYSTEM_PROMPT_LIVE = draft;
+      // Flash the B header green briefly
+      const bHead = document.querySelector('.b-head');
+      bHead.textContent = '✓ Promoted to live!';
+      bHead.style.background = '#d5f5e3';
+      bHead.style.color = '#27ae60';
+      setTimeout(() => {
+        bHead.textContent = 'B — Draft prompt';
+        bHead.style.background = '';
+        bHead.style.color = '';
+      }, 2500);
+    } else {
+      alert('Error: ' + (data.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
 // Start
 init();
 </script>
@@ -1700,7 +2102,13 @@ init();
       <div id="adminLoginErr"></div>
     </div>
 
-    <!-- Chat interface (shown after login) -->
+    <!-- Tab bar (shown after login) -->
+    <div id="adminTabs">
+      <button class="admin-tab active" onclick="adminSwitchTab('chat', this)">💬 Chat</button>
+      <button class="admin-tab" onclick="adminSwitchTab('ab', this)">🔬 A/B Test</button>
+    </div>
+
+    <!-- Chat interface -->
     <div id="adminChatWrap">
       <div id="adminMessages">
         <div id="adminTyping">Thinking…</div>
@@ -1712,6 +2120,62 @@ init();
         <button id="adminSendBtn" onclick="adminSend()">Send</button>
       </div>
     </div>
+
+    <!-- A/B Test interface -->
+    <div id="adminAB">
+      <!-- Persona selector -->
+      <div id="abPersonaBar">
+        <button class="ab-persona-btn active" onclick="abSelectPersona('curious',this)">Curious</button>
+        <button class="ab-persona-btn" onclick="abSelectPersona('publisher',this)">Publisher</button>
+        <button class="ab-persona-btn" onclick="abSelectPersona('speaker',this)">Speaker</button>
+        <button class="ab-persona-btn" onclick="abSelectPersona('academic',this)">Academic</button>
+        <button class="ab-persona-btn" onclick="abSelectPersona('collaborator',this)">Collaborator</button>
+        <button class="ab-persona-btn" onclick="abSelectPersona('recruiter',this)">Recruiter</button>
+      </div>
+
+      <div id="abBody">
+        <!-- Left: questions list -->
+        <div id="abLeft">
+          <h4>Questions</h4>
+          <div id="abQuestions">
+            <div class="ab-placeholder" style="padding:0.5rem 0.6rem;font-size:0.8rem;">
+              Click "Generate" to create questions for this persona.
+            </div>
+          </div>
+          <button id="abGenBtn" onclick="abGenerateQuestions()">⟳ Generate 10 questions</button>
+        </div>
+
+        <!-- Right: prompt editor + responses -->
+        <div id="abRight">
+          <!-- Draft prompt bar -->
+          <div id="abPromptBar">
+            <label>B Prompt</label>
+            <textarea id="abDraftPrompt" placeholder="Paste or edit a draft system prompt here — leave blank to use the live prompt for both A and B…"></textarea>
+            <div id="abPromptActions">
+              <button class="ab-load-btn" onclick="abLoadLivePrompt()">↓ Load live</button>
+              <button class="ab-promote-btn" onclick="abPromoteB()">✓ Promote B→Live</button>
+            </div>
+          </div>
+
+          <!-- Side-by-side response columns -->
+          <div id="abColumns">
+            <div class="ab-col">
+              <div class="ab-col-head a-head">A — Live prompt</div>
+              <div class="ab-col-body" id="abColA">
+                <span class="ab-placeholder">Pick a question to run a comparison.</span>
+              </div>
+            </div>
+            <div class="ab-col">
+              <div class="ab-col-head b-head">B — Draft prompt</div>
+              <div class="ab-col-body" id="abColB">
+                <span class="ab-placeholder">Pick a question to run a comparison.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
