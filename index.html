@@ -1245,9 +1245,8 @@ async function callAnthropic(key) {
   const modeNote = `\n\n[USER MODE: ${currentMode}]`;
   const systemWithMode = SYSTEM_PROMPT + modeNote;
 
-  // Use local proxy when running from GitHub Pages or file://
-  // Proxy handles CORS — run proxy.py on your machine first
-  const PROXY = 'http://localhost:8888';
+  // Cloudflare Worker proxy — handles CORS and relays to Anthropic
+  const PROXY = 'https://ethan-expert-proxy.threedwag.workers.dev';
 
   const response = await fetch(PROXY, {
     method: 'POST',
@@ -1392,7 +1391,7 @@ async function testAPI() {
   status.style.display = 'block';
 
   try {
-    const res = await fetch('http://localhost:8888', {
+    const res = await fetch('https://ethan-expert-proxy.threedwag.workers.dev', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
