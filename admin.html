@@ -428,7 +428,7 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
             <span class="ab-placeholder">Pick a question above to run a comparison.</span>
           </div>
           <div class="ab-col-prompt">
-            <div class="ab-col-prompt-label">Live prompt</div>
+              <div class="ab-col-prompt-label">Live behavior prompt</div>
             <textarea id="abLivePromptView" class="ab-prompt-textarea" readonly
                       placeholder="Live prompt loads here…"></textarea>
           </div>
@@ -440,7 +440,7 @@ html, body { height: 100%; font-family: var(--font-sans); background: var(--surf
           </div>
           <div class="ab-col-prompt">
             <div class="ab-col-prompt-label">
-              Draft prompt
+              Draft behavior prompt
               <span style="float:right;display:flex;gap:0.4rem;">
                 <button class="ab-load-btn" onclick="abLoadLivePrompt()">↓ Copy live</button>
                 <button class="ab-promote-btn" onclick="abPromoteB()">✓ Promote → Live</button>
@@ -567,7 +567,46 @@ async function chatSend() {
 // ── A/B TESTER ────────────────────────────────────────────────────
 let abPersona = 'curious';
 let abQuestionCache = {};  // persona -> [questions], loaded from KV + editable
-let abLivePrompt = '';
+let abLivePrompt    = '';   // full combined (behavior + KB) — used in API calls
+let abLiveBehavior  = '';   // system_prompt only — shown in panes, promoted
+let abLiveKnowledge = '';   // knowledge_base — appended silently to both A and B calls
+
+async function abLoadQuestions() {
+  try {
+    const res = await fetch(`${PROXY}/config`);
+    const { config } = await res.json();
+    if (config?.ab_questions && typeof config.ab_questions === 'object') {
+      Object.assign(abQuestionCache, config.ab_questions);
+    }
+    abLiveBehavior  = config?.system_prompt  || '';
+    abLiveKnowledge = config?.knowledge_base || '';
+    // Full combined prompt for actual API calls
+    abLivePrompt = abLiveBehavior && abLiveKnowledge
+      ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
+      : abLiveBehavior || abLiveKnowledge;
+    // Show only the behavior prompt in the UI panes — readable and editable
+    const liveView = document.getElementById('abLivePromptView');
+    if (liveView) liveView.value = abLiveBehavior;
+    const draft = document.getElementById('abDraftPrompt');
+    if (draft && !draft.value) draft.value = abLiveBehavior;
+  } catch (e) { /* silent */ }
+  abRenderQuestions();
+}
+
+async function abLoadLivePrompt() {
+  try {
+    const res = await fetch(`${PROXY}/config`);
+    const { config } = await res.json();
+    abLiveBehavior  = config?.system_prompt  || '';
+    abLiveKnowledge = config?.knowledge_base || '';
+    abLivePrompt = abLiveBehavior && abLiveKnowledge
+      ? abLiveBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
+      : abLiveBehavior || abLiveKnowledge;
+    const liveView = document.getElementById('abLivePromptView');
+    if (liveView) liveView.value = abLiveBehavior;
+    document.getElementById('abDraftPrompt').value = abLiveBehavior;
+  } catch (e) { /* silent */ }
+}
 
 const AB_PERSONA_LABELS = {
   curious:      'Inquiring mind',
@@ -616,43 +655,6 @@ function abRenderQuestions() {
 }
 
 // Load ab_questions from KV on page open
-async function abLoadQuestions() {
-  try {
-    const res = await fetch(`${PROXY}/config`);
-    const { config } = await res.json();
-    if (config?.ab_questions && typeof config.ab_questions === 'object') {
-      Object.assign(abQuestionCache, config.ab_questions);
-    }
-    // Combine behavior + knowledge base exactly as the Worker does
-    const behavior  = config?.system_prompt  || '';
-    const knowledge = config?.knowledge_base || '';
-    abLivePrompt = behavior && knowledge
-      ? behavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + knowledge
-      : behavior || knowledge;
-    const liveView = document.getElementById('abLivePromptView');
-    if (liveView) liveView.value = abLivePrompt;
-    const draft = document.getElementById('abDraftPrompt');
-    if (draft && !draft.value) draft.value = abLivePrompt;
-  } catch (e) { /* silent */ }
-  abRenderQuestions();
-}
-
-async function abLoadLivePrompt() {
-  try {
-    const res = await fetch(`${PROXY}/config`);
-    const { config } = await res.json();
-    // Combine behavior + knowledge base exactly as the Worker does at runtime
-    const behavior  = config?.system_prompt  || '';
-    const knowledge = config?.knowledge_base || '';
-    abLivePrompt = behavior && knowledge
-      ? behavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + knowledge
-      : behavior || knowledge;
-    const liveView = document.getElementById('abLivePromptView');
-    if (liveView) liveView.value = abLivePrompt;
-    document.getElementById('abDraftPrompt').value = abLivePrompt;
-  } catch (e) { /* silent */ }
-}
-
 // Save current textarea content for this persona to KV
 async function abSaveQuestions() {
   const raw = document.getElementById('abQEdit').value.trim();
@@ -737,8 +739,14 @@ async function abRunQuestion(btn, question) {
   btn.classList.add('running');
   const colA = document.getElementById('abColA');
   const colB = document.getElementById('abColB');
-  const draft = document.getElementById('abDraftPrompt').value.trim();
-  const live  = abLivePrompt;
+  const draftBehavior = document.getElementById('abDraftPrompt').value.trim();
+  // A = live behavior + KB (what users actually see)
+  const liveFullPrompt = abLivePrompt;
+  // B = draft behavior + live KB (testing a behavior change against same facts)
+  const draftFullPrompt = draftBehavior && abLiveKnowledge
+    ? draftBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
+    : draftBehavior || liveFullPrompt;
+
   const label = `<div class="ab-qlabel">"${question}"</div>`;
   colA.innerHTML = label + '<div class="ab-running">Running A…</div>';
   colB.innerHTML = label + '<div class="ab-running">Running B…</div>';
@@ -762,14 +770,14 @@ async function abRunQuestion(btn, question) {
   }
 
   // If both prompts are identical, run only once and reuse the result
-  const samePrompt = (draft || live) === live;
+  const samePrompt = draftFullPrompt === liveFullPrompt;
   let rA, rB;
   if (samePrompt) {
-    const single = await Promise.allSettled([call(live)]);
+    const single = await Promise.allSettled([call(liveFullPrompt)]);
     rA = single[0];
     rB = { status: rA.status, value: rA.value, reason: rA.reason };
   } else {
-    [rA, rB] = await Promise.allSettled([call(live), call(draft)]);
+    [rA, rB] = await Promise.allSettled([call(liveFullPrompt), call(draftFullPrompt)]);
   }
 
   colA.innerHTML = label + (rA.status === 'fulfilled'
@@ -782,18 +790,23 @@ async function abRunQuestion(btn, question) {
 }
 
 async function abPromoteB() {
-  const draft = document.getElementById('abDraftPrompt').value.trim();
-  if (!draft) { alert('No draft prompt to promote.'); return; }
-  if (!confirm('Promote B to live? This immediately affects all users.')) return;
+  const draftBehavior = document.getElementById('abDraftPrompt').value.trim();
+  if (!draftBehavior) { alert('No draft behavior prompt to promote.'); return; }
+  if (!confirm('Promote B behavior prompt to live? This immediately affects all users.')) return;
   try {
     const res = await fetch(`${PROXY}/admin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Admin-Password': adminPw },
-      body: JSON.stringify({ system_prompt: draft }),
+      body: JSON.stringify({ system_prompt: draftBehavior }),  // promote behavior only, KB unchanged
     });
     const data = await res.json();
     if (data.ok) {
-      abLivePrompt = draft;
+      // Update local state
+      abLiveBehavior = draftBehavior;
+      abLivePrompt = draftBehavior && abLiveKnowledge
+        ? draftBehavior + '\n\n---\n\nKNOWLEDGE BASE:\n\n' + abLiveKnowledge
+        : draftBehavior || abLiveKnowledge;
+      document.getElementById('abLivePromptView').value = draftBehavior;
       const bHead = document.querySelector('.b-head');
       const orig = bHead.innerHTML;
       bHead.innerHTML = '✓ Promoted to live!';
