@@ -59,7 +59,9 @@ async function saveConfig(env, data) {
   const writes = [];
   for (const k of CONFIG_KEYS) {
     if (k in data) {
-      const val = k === 'quick_questions' ? JSON.stringify(data[k]) : String(data[k]);
+      const val = (k === 'quick_questions' || k === 'ab_questions')
+        ? JSON.stringify(data[k])
+        : String(data[k]);
       writes.push(env.CONFIG.put(k, val));
     }
   }
