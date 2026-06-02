@@ -188,11 +188,162 @@ html, body {
   font-size: 0.72rem; color: var(--faint);
   font-family: var(--mono); flex-shrink: 0; padding-bottom: 0.3rem;
 }
+
+/* ════════════════════════════════════════
+   LARGE SCREEN LAYOUT (≥ 768px)
+   Left sidebar: title + question + input
+   Right panel:  agent response
+════════════════════════════════════════ */
+@media (min-width: 768px) {
+
+  #app {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    grid-template-rows: 1fr;
+    max-width: 1200px;
+    padding: 0;
+    gap: 0;
+    height: 100dvh;
+  }
+
+  /* ── LEFT SIDEBAR ── */
+  #sidebar-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3rem 2.5rem 3rem 3rem;
+    border-right: 1px solid var(--border);
+    height: 100dvh;
+    gap: 2rem;
+  }
+
+  /* ── RIGHT CONTENT PANEL ── */
+  #content-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3rem 3rem 3rem 2.5rem;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* Hide the small-screen single-column app wrapper internals */
+  #app > #header,
+  #app > #hero,
+  #app > #exchange,
+  #app > #chat-input-area { display: none !important; }
+
+  /* Hero sidebar state */
+  #sidebar-col #hero-title { display: flex; flex-direction: column; gap: 0.4rem; }
+  #sidebar-col #hero-title-main {
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
+    font-weight: normal;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    line-height: 1.15;
+  }
+  #sidebar-col #hero-title-main em { font-style: normal; color: var(--accent); }
+  #sidebar-col #hero-subtitle {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+  #sidebar-col #hero-question {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  #sidebar-col #hero-input-area {
+    width: 100%;
+    border-top: 1px solid var(--border);
+    padding-top: 0.75rem;
+  }
+  #sidebar-col.hero-hidden #hero-title { display: flex; } /* keep title visible */
+
+  /* Chat sidebar state — title + input */
+  #sidebar-col #sidebar-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  #sidebar-col #sidebar-header-name {
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
+    font-weight: normal;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    line-height: 1.15;
+  }
+  #sidebar-col #sidebar-header-name em { font-style: normal; color: var(--accent); }
+  #sidebar-col #sidebar-header-sub {
+    font-size: 0.8rem; color: var(--muted);
+    font-family: var(--mono); letter-spacing: 0.04em;
+  }
+  #sidebar-col #sidebar-input-area {
+    width: 100%;
+    border-top: 1px solid var(--border);
+    padding-top: 0.75rem;
+  }
+
+  /* Right panel content */
+  #content-col #wide-exchange {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    overflow: hidden;
+  }
+  #content-col #wide-user-turn {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.6;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    flex-shrink: 0;
+  }
+  #content-col #wide-user-turn.show { opacity: 1; }
+  #content-col #wide-user-turn.fade { opacity: 0; }
+  #content-col #wide-agent-turn {
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--text);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    max-height: calc(100dvh - 8rem);
+  }
+  #content-col #wide-agent-turn.show { opacity: 1; }
+  #content-col #wide-agent-turn p { margin-bottom: 0.75em; }
+  #content-col #wide-agent-turn p:last-child { margin-bottom: 0; }
+  #content-col #wide-agent-turn strong { color: #fff; font-weight: 600; }
+  #content-col #wide-agent-turn em { color: var(--muted); font-style: italic; }
+  #content-col #wide-agent-turn ul { padding-left: 1.2em; margin: 0.5em 0; }
+  #content-col #wide-agent-turn li { margin-bottom: 0.3em; }
+  #content-col #wide-agent-turn h3 { font-size: 1rem; font-weight: 600; margin: 0.75em 0 0.35em; color: #fff; }
+  #content-col #wide-agent-turn blockquote {
+    border-left: 2px solid var(--border);
+    padding-left: 1em;
+    color: var(--muted);
+    font-style: italic;
+  }
+  #content-col #wide-typing {
+    display: none; gap: 5px; align-items: center; height: 1.5rem;
+  }
+  #content-col #wide-typing span {
+    width: 5px; height: 5px; background: var(--muted);
+    border-radius: 50%; animation: pulse 1.2s ease-in-out infinite;
+  }
+  #content-col #wide-typing span:nth-child(2) { animation-delay: 0.2s; }
+  #content-col #wide-typing span:nth-child(3) { animation-delay: 0.4s; }
+}
+
 </style>
 </head>
 <body>
 <div id="app">
 
+  <!-- ═══ SMALL SCREEN LAYOUT (mobile) ═══ -->
   <div id="header">
     <span id="header-name">Ask <em>EthanExpert</em></span>
   </div>
@@ -229,6 +380,33 @@ html, body {
         onkeydown="handleKey(event,'chat')"
         oninput="autoResize(this)"></textarea>
       <span class="send-hint">↵ send</span>
+    </div>
+  </div>
+
+  <!-- ═══ LARGE SCREEN LAYOUT (≥ 768px) ═══ -->
+  <div id="sidebar-col">
+    <!-- Hero state: title + question + input -->
+    <div id="wide-hero-title">
+      <div id="sidebar-header-name">Ask <em>EthanExpert</em></div>
+      <div id="sidebar-header-sub">Explore the world of Ethan Watters</div>
+    </div>
+    <div id="wide-hero-question"></div>
+    <div id="sidebar-input-area">
+      <div class="input-wrap">
+        <textarea id="wide-input" class="input-field" placeholder="Type here…" rows="1"
+          onkeydown="handleKey(event,'wide')"
+          oninput="autoResize(this)"></textarea>
+        <span class="send-hint">↵ send</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="content-col">
+    <div id="wide-exchange">
+      <div id="wide-user-turn"></div>
+      <div id="wide-agent-turn">
+        <div id="wide-typing"><span></span><span></span><span></span></div>
+      </div>
     </div>
   </div>
 
@@ -270,23 +448,33 @@ async function init() {
 }
 
 // ── HERO ──────────────────────────────────────────────────────────
+function isWide() { return window.innerWidth >= 768; }
+
 async function heroSays(text, htmlExtra) {
-  const q = document.getElementById('hero-question');
-  q.innerHTML = '<div style="display:flex;gap:5px;align-items:center;height:1.5rem">' +
+  const dots = '<div style="display:flex;gap:5px;align-items:center;height:1.5rem">' +
     '<span style="width:5px;height:5px;background:var(--muted);border-radius:50%;animation:pulse 1.2s ease-in-out infinite"></span>'.repeat(3) +
     '</div>';
+  // Small screen
+  document.getElementById('hero-question').innerHTML = dots;
+  // Wide screen
+  document.getElementById('wide-hero-question').innerHTML = dots;
   await delay(420);
-  q.innerHTML = renderMarkdown(text) + (htmlExtra || '');
+  const html = renderMarkdown(text) + (htmlExtra || '');
+  document.getElementById('hero-question').innerHTML = html;
+  document.getElementById('wide-hero-question').innerHTML = html;
+  document.getElementById(isWide() ? 'wide-input' : 'hero-input').focus();
 }
-
 // ── SWITCH TO CHAT LAYOUT ─────────────────────────────────────────
 function switchToChatLayout() {
   if (chatStarted) return;
   chatStarted = true;
+  // Small screen
   document.getElementById('hero').classList.add('hidden');
   document.getElementById('header').classList.add('visible');
   document.getElementById('exchange').classList.add('visible');
   document.getElementById('chat-input-area').classList.add('visible');
+  // Wide screen — hide the question from sidebar, keep title
+  document.getElementById('wide-hero-question').style.display = 'none';
   document.getElementById('chat-input').focus();
 }
 
@@ -300,10 +488,14 @@ function autoResize(el) {
 }
 async function submit(src) {
   if (busy) return;
-  const el = document.getElementById(src === 'hero' ? 'hero-input' : 'chat-input');
+  const id = src === 'hero' ? 'hero-input' : src === 'wide' ? 'wide-input' : 'chat-input';
+  const el = document.getElementById(id);
   const text = el.value.trim();
   if (!text) return;
   el.value = ''; el.style.height = 'auto';
+  // Also clear the other input
+  if (src === 'wide') { const ci = document.getElementById('chat-input'); if(ci) ci.value=''; }
+  if (src === 'chat') { const wi = document.getElementById('wide-input'); if(wi) wi.value=''; }
   await handleUserInput(text);
 }
 
@@ -336,34 +528,52 @@ async function handleUserInput(text) {
 
 // ── EXCHANGE DISPLAY ──────────────────────────────────────────────
 function showUserTurn(text) {
+  // Small screen
   const u = document.getElementById('user-turn');
   u.textContent = text;
-  u.classList.remove('fade');
-  u.classList.add('show');
+  u.classList.remove('fade'); u.classList.add('show');
+  // Wide screen
+  const wu = document.getElementById('wide-user-turn');
+  wu.textContent = text;
+  wu.classList.remove('fade'); wu.classList.add('show');
 }
 
 async function showAgentTurn(text, htmlExtra) {
-  // Fade out user turn
-  const u = document.getElementById('user-turn');
-  u.classList.add('fade');
+  // Fade out user turns
+  document.getElementById('user-turn').classList.add('fade');
+  document.getElementById('wide-user-turn').classList.add('fade');
 
-  // Show typing
-  const a = document.getElementById('agent-turn');
+  // Show typing in both
+  const a  = document.getElementById('agent-turn');
+  const wa = document.getElementById('wide-agent-turn');
   a.classList.remove('show');
-  document.getElementById('typing').style.display = 'flex';
+  wa.classList.remove('show');
+  document.getElementById('typing').style.display      = 'flex';
+  document.getElementById('wide-typing').style.display = 'flex';
   await delay(500);
 
-  // Render response
-  document.getElementById('typing').style.display = 'none';
-  a.innerHTML = renderMarkdown(text) + (htmlExtra || '');
-  // Re-append typing (hidden) so it stays available
-  const typingEl = document.createElement('div');
-  typingEl.id = 'typing';
-  typingEl.style.display = 'none';
-  typingEl.innerHTML = '<span></span><span></span><span></span>';
-  a.appendChild(typingEl);
+  // Render in both
+  document.getElementById('typing').style.display      = 'none';
+  document.getElementById('wide-typing').style.display = 'none';
+
+  const html = renderMarkdown(text) + (htmlExtra || '');
+
+  // Small screen — re-append typing element
+  a.innerHTML = html;
+  const t1 = document.createElement('div');
+  t1.id = 'typing'; t1.style.display = 'none';
+  t1.innerHTML = '<span></span><span></span><span></span>';
+  a.appendChild(t1);
+
+  // Wide screen — re-append typing element
+  wa.innerHTML = html;
+  const t2 = document.createElement('div');
+  t2.id = 'wide-typing'; t2.style.display = 'none';
+  t2.innerHTML = '<span></span><span></span><span></span>';
+  wa.appendChild(t2);
 
   a.classList.add('show');
+  wa.classList.add('show');
 }
 
 function buildPersonaChoices() {
@@ -398,9 +608,13 @@ async function sendToAgent() {
   u.classList.add('fade');
   const a = document.getElementById('agent-turn');
   a.classList.remove('show');
-  document.getElementById('typing').style.display = 'flex';
+  document.getElementById('typing').style.display      = 'flex';
+  const wt = document.getElementById('wide-typing');
+  if (wt) wt.style.display = 'flex';
 
+  const wi = document.getElementById('wide-input');
   document.getElementById('chat-input').disabled = true;
+  if (wi) wi.disabled = true;
   try {
     const res = await fetch(PROXY, {
       method: 'POST',
@@ -422,6 +636,8 @@ async function sendToAgent() {
   } finally {
     document.getElementById('chat-input').disabled = false;
     document.getElementById('chat-input').focus();
+    const wi2 = document.getElementById('wide-input');
+    if (wi2) { wi2.disabled = false; if (isWide()) wi2.focus(); }
   }
 }
 
