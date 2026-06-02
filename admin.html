@@ -675,6 +675,25 @@ async function abLoadLivePrompt() {
   } catch (e) { /* silent */ }
 }
 
+function renderMarkdown(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    .replace(/^[-•] (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g, m => `<ul>${m}</ul>`)
+    .split(/\n\n+/)
+    .map(para => {
+      para = para.trim();
+      if (!para) return '';
+      if (/^<(h3|ul|blockquote)/.test(para)) return para;
+      return `<p>${para.replace(/\n/g, '<br>')}</p>`;
+    })
+    .join('');
+}
+
 async function abRunQuestion(btn, question) {
   document.querySelectorAll('.ab-q-btn').forEach(b => b.classList.remove('running'));
   btn.classList.add('running');
@@ -687,15 +706,17 @@ async function abRunQuestion(btn, question) {
   colB.innerHTML = label + '<div class="ab-running">Running B…</div>';
 
   async function call(prompt) {
+    const body = {
+      model: 'claude-sonnet-4-6',
+      messages: [{ role: 'user', content: question }],
+      max_tokens: 800,
+    };
+    // Only include system if we have one — Worker will inject KV prompt if absent
+    if (prompt) body.system = prompt + `\n\n[USER MODE: ${abPersona}]`;
     const res = await fetch(PROXY, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        system: prompt + `\n\n[USER MODE: ${abPersona}]`,
-        messages: [{ role: 'user', content: question }],
-        max_tokens: 800,
-      }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
@@ -703,8 +724,12 @@ async function abRunQuestion(btn, question) {
   }
 
   const [rA, rB] = await Promise.allSettled([call(live), call(draft || live)]);
-  colA.innerHTML = label + (rA.status === 'fulfilled' ? rA.value : `<span style="color:#c0392b">Error: ${rA.reason?.message}</span>`);
-  colB.innerHTML = label + (rB.status === 'fulfilled' ? rB.value : `<span style="color:#c0392b">Error: ${rB.reason?.message}</span>`);
+  colA.innerHTML = label + (rA.status === 'fulfilled'
+    ? renderMarkdown(rA.value)
+    : `<span style="color:#c0392b">Error: ${rA.reason?.message}</span>`);
+  colB.innerHTML = label + (rB.status === 'fulfilled'
+    ? renderMarkdown(rB.value)
+    : `<span style="color:#c0392b">Error: ${rB.reason?.message}</span>`);
   btn.classList.remove('running');
 }
 
