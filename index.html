@@ -1069,16 +1069,14 @@ const QUICK_QUESTIONS = {
 // INIT
 // ══════════════════════════════════════════════
 function init() {
-  // Key loaded in two parts so it doesn't trip secret scanners
-  const _a = 'sk-ant-api03-tam3sF7GltPoGe8jfLJllp9qQ27SWs6QOgzPY3Hk5ucM9Dru';
-  const _b = 'D9xGJ7hKvkRIMofyBhf8fL9zZzQhDymXOxn1Gw-FGifHQAA';
-  const HARDCODED_KEY = _a + _b;
-  sessionStorage.setItem('ew_api_key', HARDCODED_KEY);
+  // API key is held server-side in the Cloudflare Worker secret — no key needed here.
   sessionStorage.setItem('ew_provider', 'anthropic');
-  document.getElementById('apiKeyInput').value = HARDCODED_KEY;
+  // Mark sidebar as ready (no user key required for Anthropic via proxy)
   const status = document.getElementById('apiStatus');
-  status.textContent = '✓ Key loaded';
-  status.className = 'api-status ok';
+  if (status) {
+    status.textContent = '✓ Ready';
+    status.className = 'api-status ok';
+  }
 
   const savedProvider = sessionStorage.getItem('ew_provider') || 'anthropic';
   document.getElementById('providerSelect').value = savedProvider;
@@ -1166,8 +1164,12 @@ async function sendMessage() {
   if (!text) return;
 
   const key = sessionStorage.getItem('ew_api_key') || '';
-  if (!key) {
-    showError('Please enter an API key in the sidebar to start chatting.');
+  const provider = sessionStorage.getItem('ew_provider') || 'anthropic';
+
+  // Anthropic goes through the Worker proxy — no client key needed.
+  // OpenAI still needs a user-supplied key.
+  if (provider !== 'anthropic' && !key) {
+    showError('Please enter an OpenAI API key in the sidebar to use GPT models.');
     return;
   }
 
@@ -1187,11 +1189,10 @@ async function sendMessage() {
   document.getElementById('sendBtn').disabled = true;
 
   try {
-    const provider = sessionStorage.getItem('ew_provider') || 'anthropic';
     let reply;
 
     if (provider === 'anthropic') {
-      reply = await callAnthropic(key);
+      reply = await callAnthropic();
     } else {
       reply = await callOpenAI(key);
     }
@@ -1204,7 +1205,7 @@ async function sendMessage() {
     removeTyping(typingId);
     // Show the FULL raw error for debugging
     const detail = err.message || String(err);
-    showError('DEBUG: ' + detail + ' | type=' + err.constructor.name + ' | key_starts=' + (key.substring(0,12)));
+    showError('Error: ' + (err.message || String(err)));
   } finally {
     isStreaming = false;
     document.getElementById('sendBtn').disabled = false;
@@ -1241,19 +1242,18 @@ async function callOpenAI(key) {
   return data.choices[0].message.content;
 }
 
-async function callAnthropic(key) {
+async function callAnthropic() {
   const modeNote = `\n\n[USER MODE: ${currentMode}]`;
   const systemWithMode = SYSTEM_PROMPT + modeNote;
 
-  // Cloudflare Worker proxy — handles CORS and relays to Anthropic
+  // Cloudflare Worker proxy — API key is held server-side as a Worker secret.
+  // No credentials are sent from the browser.
   const PROXY = 'https://ethan-expert-proxy.threedwag.workers.dev';
 
   const response = await fetch(PROXY, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
