@@ -5,403 +5,324 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Secret Agent Ethan</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --ink: #1a1714;
-    --ink-muted: #6b6560;
-    --ink-faint: #b0aaa5;
-    --surface: #faf8f5;
-    --surface-2: #f0ece6;
-    --surface-3: #e6e0d8;
-    --accent: #8b4513;
-    --accent-warm: #c4622d;
-    --accent-light: #f5ede5;
-    --border: #ddd8d0;
-    --radius: 4px;
-    --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-    --nav-w: 220px;
-  }
-  html, body { height: 100%; font-family: var(--font-sans); background: var(--surface); color: var(--ink); }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #1a1714;
+  --ink-muted: #6b6560;
+  --ink-faint: #b0aaa5;
+  --surface: #faf8f5;
+  --surface-2: #f0ece6;
+  --border: #ddd8d0;
+  --accent: #8b4513;
+  --accent-warm: #c4622d;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --sidebar-w: 180px;
+  --topbar-h: 44px;
+}
+html, body { height: 100%; font-family: var(--font-sans); background: var(--surface); color: var(--ink); overflow: hidden; }
 
-  /* ── LAYOUT ── */
-  #app { display: flex; height: 100dvh; overflow: hidden; }
+/* ══════════════════════════════════════
+   TOP BAR
+══════════════════════════════════════ */
+#topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  background: #1a1714;
+  display: flex; align-items: center;
+  padding: 0 1rem;
+  gap: 0.75rem;
+  z-index: 100;
+}
+#topbar .brand {
+  font-size: 0.82rem; font-weight: 700;
+  color: #fff; letter-spacing: 0.01em;
+  flex: 1;
+}
+#topbar .brand em { font-style: normal; color: #c4622d; }
+#topbar a, #topbar button.topbtn {
+  font-size: 0.78rem; color: rgba(255,255,255,0.45);
+  text-decoration: none; background: none; border: none;
+  cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 3px;
+}
+#topbar a:hover, #topbar button.topbtn:hover { color: rgba(255,255,255,0.85); }
 
-  /* ── SIDEBAR NAV ── */
-  #sidebar {
-    width: var(--nav-w);
-    flex-shrink: 0;
-    background: #1a1714;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  #sidebar-header {
-    padding: 1.25rem 1.25rem 0.75rem;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-  }
-  #sidebar-header .logo {
-    font-size: 0.7rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.35);
-    margin-bottom: 0.2rem;
-  }
-  #sidebar-header .title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #fff;
-    line-height: 1.2;
-  }
-  #sidebar-header .title em {
-    font-style: normal;
-    color: var(--accent-warm);
-  }
-  #nav-links {
-    flex: 1;
-    padding: 0.75rem 0.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .nav-link {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.6rem 0.75rem;
-    border-radius: var(--radius);
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: rgba(255,255,255,0.55);
-    cursor: pointer;
-    border: none;
-    background: none;
-    text-align: left;
-    width: 100%;
-    transition: background 0.15s, color 0.15s;
-  }
-  .nav-link:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); }
-  .nav-link.active { background: rgba(196,98,45,0.2); color: #fff; }
-  .nav-link .icon { font-size: 1rem; flex-shrink: 0; }
-  #sidebar-footer {
-    padding: 0.75rem 1rem;
-    border-top: 1px solid rgba(255,255,255,0.08);
-  }
-  #sidebar-footer a {
-    font-size: 0.78rem;
-    color: rgba(255,255,255,0.3);
-    text-decoration: none;
-  }
-  #sidebar-footer a:hover { color: rgba(255,255,255,0.6); }
+/* ══════════════════════════════════════
+   APP SHELL
+══════════════════════════════════════ */
+#app {
+  display: flex;
+  height: 100dvh;
+  padding-top: var(--topbar-h);
+  overflow: hidden;
+}
 
-  /* ── MAIN CONTENT ── */
-  #main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-width: 0;
-  }
+/* ══════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════ */
+#sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: #242018;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+.sidebar-section-label {
+  font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  padding: 1rem 0.85rem 0.35rem;
+}
+.nav-link {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.83rem; font-weight: 500;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer; border: none; background: none;
+  text-align: left; width: 100%;
+  border-radius: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.nav-link:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.8); }
+.nav-link.active { background: rgba(196,98,45,0.18); color: #fff; }
+.nav-link .icon { font-size: 0.9rem; flex-shrink: 0; width: 1.1rem; text-align: center; }
+.nav-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 0.5rem 0; }
+.persona-link {
+  display: block;
+  padding: 0.4rem 0.85rem 0.4rem 1.1rem;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.38);
+  cursor: pointer; border: none; background: none;
+  text-align: left; width: 100%;
+  border-left: 2px solid transparent;
+  transition: all 0.12s;
+}
+.persona-link:hover { color: rgba(255,255,255,0.7); }
+.persona-link.active {
+  color: #c4622d;
+  border-left-color: #c4622d;
+  background: rgba(196,98,45,0.08);
+}
 
-  /* ── LOGIN SCREEN ── */
-  #loginScreen {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  #loginBox {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 2.5rem;
-    width: 360px;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.07);
-  }
-  #loginBox h2 { font-size: 1.1rem; font-weight: 700; }
-  #loginBox p { font-size: 0.85rem; color: var(--ink-muted); }
-  #loginBox label { font-size: 0.78rem; font-weight: 600; color: var(--ink-muted); }
-  #loginBox input {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.6rem 0.75rem;
-    font-size: 0.95rem;
-    margin-top: 0.25rem;
-  }
-  #loginBox button {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius);
-    padding: 0.65rem 1.25rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    align-self: flex-start;
-  }
-  #loginBox button:hover { background: var(--accent-warm); }
-  #loginErr { font-size: 0.83rem; color: #c0392b; min-height: 1em; }
+/* ══════════════════════════════════════
+   MAIN CONTENT
+══════════════════════════════════════ */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 
-  /* ── PAGE WRAPPER ── */
-  .page { display: none; flex: 1; flex-direction: column; overflow: hidden; }
-  .page.visible { display: flex; }
-  .page-header {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .page-header h1 { font-size: 1rem; font-weight: 700; }
-  .page-header p { font-size: 0.8rem; color: var(--ink-muted); margin-top: 0.1rem; }
+/* ══════════════════════════════════════
+   LOGIN
+══════════════════════════════════════ */
+#loginScreen {
+  flex: 1; display: flex;
+  align-items: center; justify-content: center;
+  background: var(--surface);
+}
+#loginBox {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 8px; padding: 2.25rem;
+  width: 340px; display: flex; flex-direction: column; gap: 1rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+#loginBox h2 { font-size: 1rem; font-weight: 700; }
+#loginBox label { font-size: 0.75rem; font-weight: 600; color: var(--ink-muted); display: block; margin-bottom: 0.25rem; }
+#loginBox input {
+  width: 100%; border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.55rem 0.75rem; font-size: 0.9rem;
+}
+#loginBox input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#loginBox button {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 4px; padding: 0.6rem 1.1rem;
+  font-size: 0.88rem; font-weight: 600; cursor: pointer; align-self: flex-start;
+}
+#loginBox button:hover { background: var(--accent-warm); }
+#loginErr { font-size: 0.8rem; color: #c0392b; min-height: 1em; }
 
-  /* ══════════════════════════════
-     CHAT PAGE
-  ══════════════════════════════ */
-  #chatPage { background: var(--surface); }
-  #chatMessages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1.25rem 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-    max-width: 800px;
-    width: 100%;
-    margin: 0 auto;
-    align-self: stretch;
-  }
-  .chat-msg {
-    max-width: 85%;
-    padding: 0.7rem 1rem;
-    border-radius: 12px;
-    font-size: 0.9rem;
-    line-height: 1.6;
-    white-space: pre-wrap;
-  }
-  .chat-msg.bot {
-    align-self: flex-start;
-    background: #fff;
-    border: 1px solid var(--border);
-    color: var(--ink);
-  }
-  .chat-msg.user {
-    align-self: flex-end;
-    background: var(--accent);
-    color: #fff;
-  }
-  .chat-msg.note {
-    align-self: center;
-    background: none;
-    color: var(--ink-faint);
-    font-size: 0.78rem;
-    font-style: italic;
-    max-width: 100%;
-    text-align: center;
-  }
-  #chatTyping {
-    display: none;
-    align-self: flex-start;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.6rem 1rem;
-    font-size: 0.85rem;
-    color: var(--ink-muted);
-    font-style: italic;
-  }
-  #chatInputRow {
-    border-top: 1px solid var(--border);
-    padding: 0.85rem 1.5rem;
-    background: #fff;
-    display: flex;
-    gap: 0.6rem;
-    max-width: 800px;
-    width: 100%;
-    margin: 0 auto;
-    align-self: stretch;
-  }
-  #chatInput {
-    flex: 1;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.6rem 0.85rem;
-    font-size: 0.9rem;
-    font-family: inherit;
-    resize: none;
-    height: 44px;
-    max-height: 140px;
-    background: var(--surface);
-  }
-  #chatInput:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  #chatSendBtn {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    padding: 0 1.1rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-  #chatSendBtn:hover { background: var(--accent-warm); }
-  #chatSendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* ══════════════════════════════════════
+   PAGE WRAPPER
+══════════════════════════════════════ */
+.page { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.page.visible { display: flex; }
 
-  /* ══════════════════════════════
-     A/B PAGE
-  ══════════════════════════════ */
-  #abPage { background: var(--surface); }
-  #abPersonaBar {
-    display: flex;
-    gap: 0.4rem;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    background: #fff;
-  }
-  .ab-persona-btn {
-    padding: 0.3rem 0.85rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    background: var(--surface-2);
-    color: var(--ink-muted);
-    cursor: pointer;
-    text-transform: capitalize;
-  }
-  .ab-persona-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-  #abBody { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+/* ══════════════════════════════════════
+   CHAT PAGE
+══════════════════════════════════════ */
+#chatMessages {
+  flex: 1; overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  display: flex; flex-direction: column; gap: 0.8rem;
+  max-width: 820px; width: 100%;
+  margin: 0 auto; align-self: stretch;
+}
+.chat-msg {
+  max-width: 82%; padding: 0.65rem 0.95rem;
+  border-radius: 12px; font-size: 0.875rem;
+  line-height: 1.6; white-space: pre-wrap;
+}
+.chat-msg.bot { align-self: flex-start; background: #fff; border: 1px solid var(--border); color: var(--ink); }
+.chat-msg.user { align-self: flex-end; background: var(--accent); color: #fff; }
+.chat-msg.note { align-self: center; background: none; color: var(--ink-faint); font-size: 0.76rem; font-style: italic; max-width: 100%; text-align: center; }
+#chatTyping {
+  display: none; align-self: flex-start;
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 12px; padding: 0.55rem 0.95rem;
+  font-size: 0.82rem; color: var(--ink-muted); font-style: italic;
+}
+#chatInputRow {
+  border-top: 1px solid var(--border); padding: 0.85rem 1.5rem;
+  background: #fff; display: flex; gap: 0.6rem;
+  max-width: 820px; width: 100%; margin: 0 auto; align-self: stretch;
+}
+#chatInput {
+  flex: 1; border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.6rem 0.85rem; font-size: 0.875rem; font-family: inherit;
+  resize: none; height: 44px; max-height: 140px; background: var(--surface);
+}
+#chatInput:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#chatSendBtn {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 8px; padding: 0 1.1rem;
+  font-size: 0.875rem; font-weight: 600; cursor: pointer; flex-shrink: 0;
+}
+#chatSendBtn:hover { background: var(--accent-warm); }
+#chatSendBtn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-  /* Left column: questions */
-  #abLeft {
-    width: 250px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: #fff;
-  }
-  #abLeft h4 {
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    padding: 0.75rem 0.9rem 0.4rem;
-    flex-shrink: 0;
-  }
-  #abQuestions { flex: 1; overflow-y: auto; padding: 0 0.5rem 0.5rem; }
-  .ab-q-btn {
-    display: block; width: 100%; text-align: left;
-    background: none; border: none; border-radius: 6px;
-    padding: 0.5rem 0.65rem;
-    font-size: 0.82rem; color: var(--ink); cursor: pointer;
-    line-height: 1.4; margin-bottom: 2px;
-  }
-  .ab-q-btn:hover { background: var(--surface-2); }
-  .ab-q-btn.running { opacity: 0.45; pointer-events: none; }
-  #abGenBtn {
-    margin: 0.5rem;
-    padding: 0.4rem 0.65rem;
-    font-size: 0.78rem; font-weight: 600;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    cursor: pointer; color: var(--ink-muted);
-    flex-shrink: 0;
-  }
-  #abGenBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* ══════════════════════════════════════
+   A/B PAGE
+══════════════════════════════════════ */
+#abPage { background: var(--surface); }
 
-  /* Right: prompt bar + columns */
-  #abRight { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
-  #abPromptBar {
-    display: flex; align-items: flex-start; gap: 0.6rem;
-    padding: 0.6rem 0.85rem;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    background: #fffbf7;
-  }
-  #abPromptBar label {
-    font-size: 0.7rem; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--ink-faint); flex-shrink: 0;
-    padding-top: 0.3rem;
-  }
-  #abDraftPrompt {
-    flex: 1; height: 72px;
-    border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 0.45rem 0.6rem;
-    font-size: 0.78rem; font-family: var(--font-mono);
-    resize: vertical; background: #fff;
-  }
-  #abPromptActions { display: flex; flex-direction: column; gap: 0.3rem; flex-shrink: 0; }
-  #abPromptActions button {
-    padding: 0.3rem 0.65rem; font-size: 0.75rem; font-weight: 600;
-    border-radius: var(--radius); cursor: pointer; white-space: nowrap; border: none;
-  }
-  .ab-load-btn { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border) !important; }
-  .ab-promote-btn { background: #27ae60; color: #fff; }
+/* Questions bar — horizontal strip above columns */
+#abQBar {
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+#abQBarTop {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+}
+#abQBarTop h4 {
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-faint); flex-shrink: 0;
+}
+#abPersonaLabel {
+  font-size: 0.8rem; color: var(--ink-muted);
+  font-style: italic; flex: 1;
+}
+#abGenBtn {
+  padding: 0.3rem 0.7rem; font-size: 0.76rem; font-weight: 600;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 4px; cursor: pointer; color: var(--ink-muted);
+  flex-shrink: 0;
+}
+#abGenBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+#abQList {
+  display: flex; flex-wrap: wrap; gap: 0.35rem;
+  padding: 0 0.85rem 0.65rem;
+  max-height: 96px; overflow-y: auto;
+}
+.ab-q-btn {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem; line-height: 1.35;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 20px; cursor: pointer; color: var(--ink);
+  transition: background 0.12s, border-color 0.12s;
+}
+.ab-q-btn:hover { background: var(--accent-light, #f5ede5); border-color: var(--accent); color: var(--accent); }
+.ab-q-btn.running { opacity: 0.4; pointer-events: none; }
+.ab-q-empty { font-size: 0.8rem; color: var(--ink-faint); font-style: italic; padding: 0.15rem 0; }
 
-  /* A/B response columns */
-  #abColumns { display: flex; flex: 1; min-height: 0; overflow: hidden; }
-  .ab-col {
-    flex: 1; display: flex; flex-direction: column;
-    min-width: 0; border-right: 1px solid var(--border); overflow: hidden;
-  }
-  .ab-col:last-child { border-right: none; }
-  .ab-col-head {
-    padding: 0.5rem 0.85rem;
-    font-size: 0.7rem; font-weight: 700;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .a-head { color: #2980b9; background: #eef6fd; }
-  .b-head { color: #8b4513; background: #fdf3ee; }
-  .ab-col-body {
-    flex: 1; overflow-y: auto;
-    padding: 0.85rem;
-    font-size: 0.875rem; line-height: 1.65;
-    color: var(--ink); white-space: pre-wrap;
-  }
-  .ab-placeholder { color: var(--ink-faint); font-style: italic; font-size: 0.82rem; }
-  .ab-running { color: var(--ink-muted); font-style: italic; }
-  .ab-question-label {
-    font-size: 0.75rem; color: var(--ink-faint);
-    margin-bottom: 0.6rem; font-style: italic;
-  }
+/* Response columns */
+#abColumns {
+  display: flex; flex: 1; min-height: 0; overflow: hidden;
+}
+.ab-col {
+  flex: 1; display: flex; flex-direction: column;
+  min-width: 0; border-right: 1px solid var(--border); overflow: hidden;
+}
+.ab-col:last-child { border-right: none; }
+.ab-col-head {
+  padding: 0.5rem 0.85rem;
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.a-head { color: #2471a3; background: #eaf4fb; }
+.b-head { color: #8b4513; background: #fdf3ee; }
+.ab-col-body {
+  flex: 1; overflow-y: auto; padding: 0.85rem;
+  font-size: 0.875rem; line-height: 1.65; color: var(--ink); white-space: pre-wrap;
+}
+.ab-placeholder { color: var(--ink-faint); font-style: italic; font-size: 0.82rem; }
+.ab-running { color: var(--ink-muted); font-style: italic; }
+.ab-qlabel { font-size: 0.73rem; color: var(--ink-faint); margin-bottom: 0.6rem; font-style: italic; }
+
+/* Prompt bar — bottom strip */
+#abPromptBar {
+  border-top: 1px solid var(--border);
+  background: #fffbf7;
+  flex-shrink: 0;
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+}
+#abPromptBar label {
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-faint); flex-shrink: 0; padding-top: 0.35rem;
+}
+#abDraftPrompt {
+  flex: 1; height: 68px;
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem; font-family: var(--font-mono);
+  resize: vertical; background: #fff;
+}
+#abDraftPrompt:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#abPromptActions { display: flex; flex-direction: column; gap: 0.3rem; flex-shrink: 0; }
+#abPromptActions button {
+  padding: 0.32rem 0.65rem; font-size: 0.75rem; font-weight: 600;
+  border-radius: 4px; cursor: pointer; white-space: nowrap; border: none;
+}
+.ab-load-btn { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border) !important; }
+.ab-promote-btn { background: #27ae60; color: #fff; }
+.ab-promote-btn:hover { background: #219a52; }
 </style>
 </head>
 <body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="brand">🕵️ Secret Agent <em>Ethan</em></div>
+  <a href="/" target="_blank">← Live site</a>
+  <button class="topbtn" id="signOutBtn" style="display:none" onclick="signOut()">Sign out</button>
+</div>
+
 <div id="app">
 
   <!-- SIDEBAR -->
   <nav id="sidebar">
-    <div id="sidebar-header">
-      <div class="logo">EthanExpert</div>
-      <div class="title">Secret Agent <em>Ethan</em></div>
-    </div>
-    <div id="nav-links">
-      <button class="nav-link active" id="nav-chat" onclick="showPage('chat', this)">
-        <span class="icon">💬</span> Chat Editor
-      </button>
-      <button class="nav-link" id="nav-ab" onclick="showPage('ab', this)">
-        <span class="icon">🔬</span> A/B Tester
-      </button>
-    </div>
-    <div id="sidebar-footer">
-      <a href="/" target="_blank">← View live site</a>
-    </div>
+    <div class="sidebar-section-label">Tools</div>
+    <button class="nav-link active" id="nav-chat" onclick="showPage('chat',this)">
+      <span class="icon">💬</span> Chat Editor
+    </button>
+    <button class="nav-link" id="nav-ab" onclick="showPage('ab',this)">
+      <span class="icon">🔬</span> A/B Tester
+    </button>
+
+    <div class="nav-divider"></div>
+    <div class="sidebar-section-label">Personas</div>
+    <button class="persona-link active" onclick="abSidebarPersona('curious',this)">Curious</button>
+    <button class="persona-link" onclick="abSidebarPersona('publisher',this)">Publisher</button>
+    <button class="persona-link" onclick="abSidebarPersona('speaker',this)">Speaker</button>
+    <button class="persona-link" onclick="abSidebarPersona('academic',this)">Academic</button>
+    <button class="persona-link" onclick="abSidebarPersona('collaborator',this)">Collaborator</button>
+    <button class="persona-link" onclick="abSidebarPersona('recruiter',this)">Recruiter</button>
   </nav>
 
   <!-- MAIN -->
@@ -410,10 +331,7 @@
     <!-- LOGIN -->
     <div id="loginScreen">
       <div id="loginBox">
-        <div>
-          <h2>🔐 Admin Login</h2>
-          <p style="margin-top:0.35rem;">Enter the admin password to continue.</p>
-        </div>
+        <h2>🔐 Admin Login</h2>
         <div>
           <label>Password</label>
           <input type="password" id="loginPw" placeholder="Enter password…" autocomplete="off"
@@ -426,12 +344,6 @@
 
     <!-- CHAT PAGE -->
     <div class="page" id="chatPage">
-      <div class="page-header">
-        <div>
-          <h1>💬 Chat Editor</h1>
-          <p>Talk to the agent to adjust prompts, tone, content, and quick questions.</p>
-        </div>
-      </div>
       <div id="chatMessages">
         <div id="chatTyping">Thinking…</div>
       </div>
@@ -445,56 +357,47 @@
 
     <!-- A/B PAGE -->
     <div class="page" id="abPage">
-      <div class="page-header">
-        <div>
-          <h1>🔬 A/B Prompt Tester</h1>
-          <p>Generate persona questions, compare live vs draft prompt side-by-side, promote when ready.</p>
-        </div>
-      </div>
-      <div id="abPersonaBar">
-        <button class="ab-persona-btn active" onclick="abSelectPersona('curious',this)">Curious</button>
-        <button class="ab-persona-btn" onclick="abSelectPersona('publisher',this)">Publisher</button>
-        <button class="ab-persona-btn" onclick="abSelectPersona('speaker',this)">Speaker</button>
-        <button class="ab-persona-btn" onclick="abSelectPersona('academic',this)">Academic</button>
-        <button class="ab-persona-btn" onclick="abSelectPersona('collaborator',this)">Collaborator</button>
-        <button class="ab-persona-btn" onclick="abSelectPersona('recruiter',this)">Recruiter</button>
-      </div>
-      <div id="abBody">
-        <div id="abLeft">
+
+      <!-- Questions strip -->
+      <div id="abQBar">
+        <div id="abQBarTop">
           <h4>Questions</h4>
-          <div id="abQuestions">
-            <div class="ab-placeholder" style="padding:0.5rem 0.65rem;font-size:0.8rem;">
-              Click "Generate" to create 10 questions for this persona.
-            </div>
-          </div>
-          <button id="abGenBtn" onclick="abGenerateQuestions()">⟳ Generate 10 questions</button>
+          <span id="abPersonaLabel">Curious visitor</span>
+          <button id="abGenBtn" onclick="abGenerateQuestions()">⟳ Generate 10</button>
         </div>
-        <div id="abRight">
-          <div id="abPromptBar">
-            <label>B Draft</label>
-            <textarea id="abDraftPrompt" placeholder="Paste or edit a draft system prompt here — leave blank to use the live prompt for both columns…"></textarea>
-            <div id="abPromptActions">
-              <button class="ab-load-btn" onclick="abLoadLivePrompt()">↓ Load live</button>
-              <button class="ab-promote-btn" onclick="abPromoteB()">✓ Promote B → Live</button>
-            </div>
+        <div id="abQList">
+          <span class="ab-q-empty">Click "Generate 10" to create questions for this persona.</span>
+        </div>
+      </div>
+
+      <!-- Side-by-side responses -->
+      <div id="abColumns">
+        <div class="ab-col">
+          <div class="ab-col-head a-head">A — Live prompt</div>
+          <div class="ab-col-body" id="abColA">
+            <span class="ab-placeholder">Pick a question above to run a comparison.</span>
           </div>
-          <div id="abColumns">
-            <div class="ab-col">
-              <div class="ab-col-head a-head">A — Live prompt</div>
-              <div class="ab-col-body" id="abColA">
-                <span class="ab-placeholder">Pick a question to run a comparison.</span>
-              </div>
-            </div>
-            <div class="ab-col">
-              <div class="ab-col-head b-head">B — Draft prompt</div>
-              <div class="ab-col-body" id="abColB">
-                <span class="ab-placeholder">Pick a question to run a comparison.</span>
-              </div>
-            </div>
+        </div>
+        <div class="ab-col">
+          <div class="ab-col-head b-head">B — Draft prompt</div>
+          <div class="ab-col-body" id="abColB">
+            <span class="ab-placeholder">Pick a question above to run a comparison.</span>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- B prompt bar -->
+      <div id="abPromptBar">
+        <label>B Draft</label>
+        <textarea id="abDraftPrompt"
+                  placeholder="Paste or edit a draft system prompt here — leave blank to use the live prompt for both columns…"></textarea>
+        <div id="abPromptActions">
+          <button class="ab-load-btn" onclick="abLoadLivePrompt()">↓ Load live</button>
+          <button class="ab-promote-btn" onclick="abPromoteB()">✓ Promote B → Live</button>
+        </div>
+      </div>
+
+    </div><!-- /abPage -->
 
   </div><!-- /main -->
 </div><!-- /app -->
@@ -503,13 +406,25 @@
 const PROXY = 'https://ethan-expert-proxy.threedwag.workers.dev';
 let adminPw = '';
 
-// ── PAGE ROUTING ──────────────────────────────────────────────────
+// ── SIGN OUT ─────────────────────────────────────────────────────
+function signOut() {
+  adminPw = '';
+  chatHistory = [];
+  document.getElementById('loginPw').value = '';
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('signOutBtn').style.display = 'none';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// ── PAGE ROUTING ─────────────────────────────────────────────────
 function showPage(name, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
   document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
   document.getElementById(name + 'Page').classList.add('visible');
   btn.classList.add('active');
   if (name === 'ab' && !abLivePrompt) abLoadLivePrompt();
+  if (name === 'chat') document.getElementById('chatInput').focus();
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────
@@ -528,7 +443,9 @@ async function doLogin() {
     const data = await res.json();
     adminPw = pw;
     document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('signOutBtn').style.display = '';
     document.getElementById('chatPage').classList.add('visible');
+    document.getElementById('nav-chat').classList.add('active');
     chatAddMsg('bot', data.reply || 'Hello! What would you like to change?');
     document.getElementById('chatInput').focus();
   } catch (e) { err.textContent = 'Error: ' + e.message; }
@@ -561,8 +478,7 @@ async function chatSend() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text || !adminPw) return;
-  input.value = '';
-  input.style.height = 'auto';
+  input.value = ''; input.style.height = 'auto';
   document.getElementById('chatSendBtn').disabled = true;
   chatAddMsg('user', text);
   chatHistory.push({ role: 'user', content: text });
@@ -576,15 +492,12 @@ async function chatSend() {
       body: JSON.stringify({ messages: chatHistory }),
     });
     typing.style.display = 'none';
-    if (res.status === 401) { chatAddNote('Session expired — please reload and log in again.'); adminPw = ''; return; }
+    if (res.status === 401) { chatAddNote('Session expired — sign in again.'); signOut(); return; }
     const data = await res.json();
     const reply = data.reply || 'No response.';
     chatHistory.push({ role: 'assistant', content: reply });
     chatAddMsg('bot', reply);
-    // Sync live prompt into A/B if config was saved
-    if (reply.toLowerCase().includes('saved')) {
-      abLoadLivePrompt().catch(() => {});
-    }
+    if (reply.toLowerCase().includes('saved')) abLoadLivePrompt().catch(() => {});
   } catch (e) {
     typing.style.display = 'none';
     chatAddNote('Error: ' + e.message);
@@ -599,6 +512,15 @@ let abPersona = 'curious';
 let abQuestionCache = {};
 let abLivePrompt = '';
 
+const AB_PERSONA_LABELS = {
+  curious:      'Curious visitor',
+  publisher:    'Publisher / agent',
+  speaker:      'Speaker booker',
+  academic:     'Academic / researcher',
+  collaborator: 'Collaborator',
+  recruiter:    'Recruiter',
+};
+
 const AB_PERSONA_DESCRIPTIONS = {
   curious:      'a curious general reader who has just discovered Ethan Watters and wants to understand who he is and what he has written',
   publisher:    'a book publisher or literary agent evaluating Ethan as a potential author for a new project',
@@ -608,29 +530,35 @@ const AB_PERSONA_DESCRIPTIONS = {
   recruiter:    'a recruiter or hiring manager considering Ethan for a senior editorial, strategy, or content role',
 };
 
-function abSelectPersona(persona, btn) {
+function abSidebarPersona(persona, btn) {
   abPersona = persona;
-  document.querySelectorAll('.ab-persona-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.persona-link').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  document.getElementById('abPersonaLabel').textContent = AB_PERSONA_LABELS[persona];
   abRenderQuestions();
+  // Also switch to A/B page if not already there
+  if (!document.getElementById('abPage').classList.contains('visible')) {
+    showPage('ab', document.getElementById('nav-ab'));
+    document.getElementById('nav-chat').classList.remove('active');
+  }
 }
 
 function abRenderQuestions() {
-  const container = document.getElementById('abQuestions');
+  const list = document.getElementById('abQList');
   const qs = abQuestionCache[abPersona];
   if (!qs || !qs.length) {
-    container.innerHTML = '<div class="ab-placeholder" style="padding:0.5rem 0.65rem;font-size:0.8rem;">Click "Generate" to create questions for this persona.</div>';
+    list.innerHTML = '<span class="ab-q-empty">Click "Generate 10" to create questions for this persona.</span>';
     return;
   }
-  container.innerHTML = qs.map(q =>
+  list.innerHTML = qs.map(q =>
     `<button class="ab-q-btn" onclick="abRunQuestion(this,${JSON.stringify(q)})">${q}</button>`
   ).join('');
 }
 
 async function abGenerateQuestions() {
   const btn = document.getElementById('abGenBtn');
-  btn.textContent = '⟳ Generating…';
-  btn.disabled = true;
+  btn.textContent = '⟳ Generating…'; btn.disabled = true;
+  document.getElementById('abQList').innerHTML = '<span class="ab-q-empty">Generating…</span>';
   try {
     const res = await fetch(`${PROXY}/admin/chat`, {
       method: 'POST',
@@ -638,23 +566,22 @@ async function abGenerateQuestions() {
       body: JSON.stringify({
         messages: [{
           role: 'user',
-          content: `Generate exactly 10 realistic questions that ${AB_PERSONA_DESCRIPTIONS[abPersona]} would ask the EthanExpert AI.\nReturn ONLY a numbered list 1-10, one question per line, no extra commentary. Make them varied — some specific to his books, some about his career, some about opportunities.`,
+          content: `Generate exactly 10 realistic questions that ${AB_PERSONA_DESCRIPTIONS[abPersona]} would ask the EthanExpert AI.\nReturn ONLY a numbered list 1–10, one question per line, no extra commentary. Make them varied — some specific to his books, some about his career, some about opportunities.`,
         }],
       }),
     });
     const data = await res.json();
     const questions = (data.reply || '').split('\n')
-      .map(l => l.replace(/^\d+[\.\)]\s*/, '').trim())
+      .map(l => l.replace(/^\d+[\.\)–\-]\s*/, '').trim())
       .filter(l => l.length > 10)
       .slice(0, 10);
     abQuestionCache[abPersona] = questions;
     abRenderQuestions();
   } catch (e) {
-    document.getElementById('abQuestions').innerHTML =
-      `<div class="ab-placeholder" style="padding:0.5rem 0.65rem;color:#c0392b;">Error: ${e.message}</div>`;
+    document.getElementById('abQList').innerHTML =
+      `<span class="ab-q-empty" style="color:#c0392b">Error: ${e.message}</span>`;
   } finally {
-    btn.textContent = '⟳ Generate 10 questions';
-    btn.disabled = false;
+    btn.textContent = '⟳ Generate 10'; btn.disabled = false;
   }
 }
 
@@ -674,7 +601,7 @@ async function abRunQuestion(btn, question) {
   const colB = document.getElementById('abColB');
   const draft = document.getElementById('abDraftPrompt').value.trim();
   const live  = abLivePrompt;
-  const label = `<div class="ab-question-label">"${question}"</div>`;
+  const label = `<div class="ab-qlabel">"${question}"</div>`;
   colA.innerHTML = label + '<div class="ab-running">Running A…</div>';
   colB.innerHTML = label + '<div class="ab-running">Running B…</div>';
 
@@ -714,10 +641,10 @@ async function abPromoteB() {
     if (data.ok) {
       abLivePrompt = draft;
       const bHead = document.querySelector('.b-head');
-      const orig = bHead.textContent;
-      bHead.textContent = '✓ Promoted to live!';
+      const orig = bHead.innerHTML;
+      bHead.innerHTML = '✓ Promoted to live!';
       bHead.style.cssText = 'background:#d5f5e3;color:#27ae60';
-      setTimeout(() => { bHead.textContent = orig; bHead.style.cssText = ''; }, 2500);
+      setTimeout(() => { bHead.innerHTML = orig; bHead.style.cssText = ''; }, 2500);
     } else { alert('Error: ' + (data.error || 'Unknown')); }
   } catch (e) { alert('Error: ' + e.message); }
 }
