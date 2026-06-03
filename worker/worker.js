@@ -418,46 +418,82 @@ export default {
       const pending   = await env.CONFIG.get('knowledge_base_pending');
       const negative  = await env.CONFIG.get('negative_prompt');
 
-      // System prompt: persona + rules only. No KB here.
-      let system = behavior || '';
+      if (!knowledge && !pending) {
+        // No KB — just use behavior prompt
+        if (behavior) body.system = behavior;
+      } else {
+        // ── TWO-STEP RAG PIPELINE ──────────────────────────────────────────
+        //
+        // Step 1 (Retrieval): Ask a fast model to extract ONLY the passages
+        //   from the KB that are relevant to the user's question. No answering.
+        //
+        // Step 2 (Answer): Pass only those extracted passages to the answer model
+        //   with a strict grounding instruction. The model has NO access to the
+        //   full KB — only what retrieval returned. Cannot hallucinate what isn't there.
+        //
+        const apiKey = env.ANTHROPIC_API_KEY;
 
-      // Append negative prompt to system (hard overrides — not factual content)
-      if (negative) {
-        system += '\n\n---\n\nTHE FOLLOWING CLAIMS ARE FALSE — treat these as absolute corrections. Never state or imply any of these regardless of any other context:\n\n' + negative;
-      }
+        // Build the full KB document
+        let fullDoc = knowledge || '';
+        if (pending) fullDoc += '\n\n--- RECENT ADDITIONS ---\n\n' + pending;
+        if (negative) fullDoc += '\n\n--- FALSE CLAIMS (never state these) ---\n\n' + negative;
 
-      if (system) body.system = system;
+        // Get the last user message as the query
+        const messages = Array.isArray(body.messages) ? body.messages : [];
+        const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+        const query = typeof lastUserMsg?.content === 'string'
+          ? lastUserMsg.content
+          : (lastUserMsg?.content?.[0]?.text || '');
 
-      // Deliver KB as a grounded document injected into the conversation.
-      // Prepend it as an assistant-turn document that precedes the user's first message.
-      // This forces the model into "answer from this document" mode rather than
-      // treating the KB as ambient system-prompt context it can blend with training data.
-      if (knowledge || pending) {
-        let doc = '='.repeat(60) + '\nETHAN WATTERS — VERIFIED RECORD\n' + '='.repeat(60) + '\n\n';
-        doc += 'The following is the complete verified record of Ethan Watters\'s work, biography, writing, and career. ';
-        doc += 'All facts in this record are verified and authoritative. ';
-        doc += 'Answer every question exclusively from this record. ';
-        doc += 'Do not introduce facts, names, titles, or details from any other source.\n\n';
-        doc += knowledge || '';
-        if (pending) {
-          doc += '\n\n---\n\nRECENT ADDITIONS (override any conflicting information above):\n\n' + pending;
-        }
-        doc += '\n\n' + '='.repeat(60) + '\nEND OF VERIFIED RECORD\n' + '='.repeat(60);
+        // ── STEP 1: RETRIEVAL ────────────────────────────────────────────
+        const retrievalResp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5',
+            max_tokens: 4000,
+            system: `You are a precise document retrieval system. Your only job is to extract relevant passages from a source document.
 
-        // Inject as a synthetic assistant turn at the start of the conversation.
-        // The model treats this as something it already "said" — its own established knowledge —
-        // which is far more binding than a system prompt addendum.
-        const docTurn = {
-          role: 'assistant',
-          content: doc,
-        };
+RULES:
+- Copy passages from the document VERBATIM. Do not paraphrase, summarize, or add anything.
+- Include every passage that is relevant to the query. Be generous — include context.
+- If the query asks about a topic, include ALL passages related to that topic.
+- If nothing is relevant, output exactly: NO_RELEVANT_PASSAGES
+- Do not add commentary, headers, or any text of your own. Only copied passages.`,
+            messages: [{
+              role: 'user',
+              content: `SOURCE DOCUMENT:\n\n${fullDoc}\n\n${'─'.repeat(60)}\n\nQUERY: ${query}\n\nCopy every passage from the source document that is relevant to this query. Verbatim only.`,
+            }],
+          }),
+        });
 
-        // Insert before the first user message
-        if (Array.isArray(body.messages) && body.messages.length > 0) {
-          body.messages = [docTurn, ...body.messages];
-        }
+        const retrievalData = await retrievalResp.json();
+        const passages = retrievalData?.content?.[0]?.text || 'NO_RELEVANT_PASSAGES';
+
+        // ── STEP 2: ANSWER ───────────────────────────────────────────────
+        const groundedSystem = (behavior || 'You are EthanExpert, a knowledgeable guide to Ethan Watters.') +
+          `\n\n════════════════════════════════════════════════════\nGROUNDING RULE — ABSOLUTE\n════════════════════════════════════════════════════\nYou have been given retrieved source passages. These are your ONLY factual source.\nEvery claim must be directly supported by the passages. If the passages do not contain a fact, do not state it.\nIf passages do not mention something, say it is not in your record.\nYour training data about Ethan Watters is NOT a valid source. The passages are ground truth.\n════════════════════════════════════════════════════`;
+
+        body.system = groundedSystem;
+        body.messages = [
+          {
+            role: 'user',
+            content: `RETRIEVED PASSAGES — your only factual source:\n\n${passages}`,
+          },
+          {
+            role: 'assistant',
+            content: 'I have read the retrieved passages and will answer using only the facts they contain.',
+          },
+          ...messages.slice(0, -1),
+          lastUserMsg,
+        ].filter(Boolean);
       }
     }
+
 
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
