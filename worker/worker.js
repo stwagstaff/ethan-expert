@@ -413,22 +413,50 @@ export default {
     catch { return json({ error: 'Invalid JSON' }, 400, origin); }
 
     if (!body.system) {
-      // Assemble system prompt with explicit source hierarchy:
-      // Behavior → KB → Pending (overrides KB) → Negative (overrides everything)
       const behavior  = await env.CONFIG.get('system_prompt');
       const knowledge = await env.CONFIG.get('knowledge_base');
       const pending   = await env.CONFIG.get('knowledge_base_pending');
       const negative  = await env.CONFIG.get('negative_prompt');
 
+      // System prompt: persona + rules only. No KB here.
       let system = behavior || '';
 
-      if (knowledge) system += '\n\n---\n\nKNOWLEDGE BASE:\n\n' + knowledge;
-
-      if (pending) system += '\n\n---\n\nRECENT UPDATES — OVERRIDE RULE: The following information was added after the Knowledge Base was last reconciled. If any fact below conflicts with the Knowledge Base above, the information below takes precedence:\n\n' + pending;
-
-      if (negative) system += '\n\n---\n\nNEGATIVE PROMPT — ABSOLUTE OVERRIDE: The following claims are known to be FALSE. These override ALL other sources including the Knowledge Base and Recent Updates. Actively correct or deny any of these if they arise in conversation:\n\n' + negative;
+      // Append negative prompt to system (hard overrides — not factual content)
+      if (negative) {
+        system += '\n\n---\n\nTHE FOLLOWING CLAIMS ARE FALSE — treat these as absolute corrections. Never state or imply any of these regardless of any other context:\n\n' + negative;
+      }
 
       if (system) body.system = system;
+
+      // Deliver KB as a grounded document injected into the conversation.
+      // Prepend it as an assistant-turn document that precedes the user's first message.
+      // This forces the model into "answer from this document" mode rather than
+      // treating the KB as ambient system-prompt context it can blend with training data.
+      if (knowledge || pending) {
+        let doc = '='.repeat(60) + '\nETHAN WATTERS — VERIFIED RECORD\n' + '='.repeat(60) + '\n\n';
+        doc += 'The following is the complete verified record of Ethan Watters\'s work, biography, writing, and career. ';
+        doc += 'All facts in this record are verified and authoritative. ';
+        doc += 'Answer every question exclusively from this record. ';
+        doc += 'Do not introduce facts, names, titles, or details from any other source.\n\n';
+        doc += knowledge || '';
+        if (pending) {
+          doc += '\n\n---\n\nRECENT ADDITIONS (override any conflicting information above):\n\n' + pending;
+        }
+        doc += '\n\n' + '='.repeat(60) + '\nEND OF VERIFIED RECORD\n' + '='.repeat(60);
+
+        // Inject as a synthetic assistant turn at the start of the conversation.
+        // The model treats this as something it already "said" — its own established knowledge —
+        // which is far more binding than a system prompt addendum.
+        const docTurn = {
+          role: 'assistant',
+          content: doc,
+        };
+
+        // Insert before the first user message
+        if (Array.isArray(body.messages) && body.messages.length > 0) {
+          body.messages = [docTurn, ...body.messages];
+        }
+      }
     }
 
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
