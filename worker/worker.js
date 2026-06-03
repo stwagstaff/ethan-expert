@@ -454,7 +454,7 @@ export default {
             'anthropic-version': '2023-06-01',
           },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-5',
+            model: 'claude-sonnet-4-6',
             max_tokens: 6000,
             system: `You are a precise document retrieval system. Your only job is to extract relevant passages from a source document.
 
