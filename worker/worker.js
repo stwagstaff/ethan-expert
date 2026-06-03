@@ -418,91 +418,42 @@ export default {
       const pending   = await env.CONFIG.get('knowledge_base_pending');
       const negative  = await env.CONFIG.get('negative_prompt');
 
-      // Build behavior system prompt
+      // System prompt: persona + grounding rule
       let system = behavior || 'You are EthanExpert, a knowledgeable guide to Ethan Watters.';
 
-      // Grounding rule — appended to system prompt
       system += `\n\n════════════════════════════════════════════════════
 GROUNDING RULE — ABSOLUTE
 ════════════════════════════════════════════════════
-You will be given a VERIFIED RECORD containing everything known about Ethan Watters.
+You will be given the complete VERIFIED RECORD about Ethan Watters as the first message.
 Answer exclusively from that record. Every factual claim must come directly from it.
-Do not use your training data about Ethan Watters — it is unreliable.
-If something is not in the record, say it is not in your record. Do not guess or infer.
+Do not use your training data about Ethan Watters — it contains errors and fabrications.
+If something is not stated in the record, say it is not in your record. Do not infer or guess.
 ════════════════════════════════════════════════════`;
 
       if (negative) {
-        system += `\n\nFALSE CLAIMS — never state or imply these:\n${negative}`;
+        system += `\n\nFALSE CLAIMS — never state or imply these regardless of anything else:\n${negative}`;
       }
 
       body.system = system;
 
-      // ── INLINE RAG: keyword-based section retrieval ──────────────────
-      // Split KB into sections, score each against the query, pass top matches.
-      // No second API call — stays well within Cloudflare's 30s CPU limit.
+      // Pass the full KB as a grounded user/assistant exchange before the conversation.
+      // At ~11K tokens the full KB fits comfortably in Sonnet's context window.
+      // This is simpler and more reliable than any retrieval approach.
       if (knowledge || pending) {
+        let fullDoc = knowledge || '';
+        if (pending) fullDoc += '\n\n--- RECENT ADDITIONS ---\n\n' + pending;
+
         const messages = Array.isArray(body.messages) ? body.messages : [];
-        const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
-        const query = (typeof lastUserMsg?.content === 'string'
-          ? lastUserMsg.content
-          : (lastUserMsg?.content?.[0]?.text || '')).toLowerCase();
 
-        // Split KB into sections on double-newline boundaries
-        let fullDoc = (knowledge || '') + (pending ? '\n\n--- RECENT ADDITIONS ---\n\n' + pending : '');
-        const sections = fullDoc.split(/\n{2,}/);
-
-        // Score each section: count query keyword hits
-        const queryWords = query
-          .replace(/[^\w\s]/g, ' ')
-          .split(/\s+/)
-          .filter(w => w.length > 3)
-          .filter(w => !['what', 'tell', 'about', 'does', 'have', 'list', 'with', 'that', 'this', 'from', 'were', 'them', 'they'].includes(w));
-
-        const scored = sections.map(section => {
-          const lower = section.toLowerCase();
-          let score = 0;
-          for (const word of queryWords) {
-            // Count occurrences
-            let idx = 0;
-            while ((idx = lower.indexOf(word, idx)) !== -1) { score++; idx++; }
-          }
-          return { section, score };
-        });
-
-        // Always include: the header section + top scoring sections
-        // Sort by score, take top sections up to ~12000 chars
-        const topSections = scored
-          .filter(s => s.score > 0)
-          .sort((a, b) => b.score - a.score);
-
-        // If nothing scored, include the full doc (query may be too broad)
-        let retrieved;
-        if (topSections.length === 0) {
-          retrieved = fullDoc;
-        } else {
-          // Take top sections until we hit ~15000 chars
-          let combined = '';
-          for (const { section } of topSections) {
-            if (combined.length + section.length > 15000) break;
-            combined += section + '\n\n';
-          }
-          retrieved = combined.trim() || fullDoc;
-        }
-
-        // Inject as grounded user turn before the conversation
-        const groundedTurn = {
-          role: 'user',
-          content: `VERIFIED RECORD — answer only from this:\n\n${retrieved}`,
-        };
-        const ackTurn = {
-          role: 'assistant',
-          content: 'I have read the verified record and will answer using only the facts it contains.',
-        };
-
-        // Rebuild messages: [grounded context] [ack] [prior history] [current question]
         body.messages = [
-          groundedTurn,
-          ackTurn,
+          {
+            role: 'user',
+            content: `VERIFIED RECORD — your sole source of facts about Ethan Watters:\n\n${fullDoc}`,
+          },
+          {
+            role: 'assistant',
+            content: 'I have read the complete verified record. I will answer all questions using only the facts it contains, and will not draw on any other knowledge about Ethan Watters.',
+          },
           ...messages,
         ].filter(Boolean);
       }
