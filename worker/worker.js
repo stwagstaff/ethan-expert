@@ -454,8 +454,8 @@ export default {
             'anthropic-version': '2023-06-01',
           },
           body: JSON.stringify({
-            model: 'claude-haiku-4-5',
-            max_tokens: 4000,
+            model: 'claude-sonnet-4-5',
+            max_tokens: 6000,
             system: `You are a precise document retrieval system. Your only job is to extract relevant passages from a source document.
 
 RULES:
@@ -472,6 +472,10 @@ RULES:
         });
 
         const retrievalData = await retrievalResp.json();
+        // Surface retrieval errors clearly rather than silently falling through
+        if (!retrievalResp.ok || retrievalData.error) {
+          return json({ error: `Retrieval step failed: ${JSON.stringify(retrievalData.error || retrievalData)}` }, 502, origin);
+        }
         const passages = retrievalData?.content?.[0]?.text || 'NO_RELEVANT_PASSAGES';
 
         // ── STEP 2: ANSWER ───────────────────────────────────────────────
@@ -510,3 +514,4 @@ RULES:
     return json(data, anthropicResp.status, origin);
   },
 };
+
