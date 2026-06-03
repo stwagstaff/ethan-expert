@@ -418,86 +418,95 @@ export default {
       const pending   = await env.CONFIG.get('knowledge_base_pending');
       const negative  = await env.CONFIG.get('negative_prompt');
 
-      if (!knowledge && !pending) {
-        // No KB — just use behavior prompt
-        if (behavior) body.system = behavior;
-      } else {
-        // ── TWO-STEP RAG PIPELINE ──────────────────────────────────────────
-        //
-        // Step 1 (Retrieval): Ask a fast model to extract ONLY the passages
-        //   from the KB that are relevant to the user's question. No answering.
-        //
-        // Step 2 (Answer): Pass only those extracted passages to the answer model
-        //   with a strict grounding instruction. The model has NO access to the
-        //   full KB — only what retrieval returned. Cannot hallucinate what isn't there.
-        //
-        const apiKey = env.ANTHROPIC_API_KEY;
+      // Build behavior system prompt
+      let system = behavior || 'You are EthanExpert, a knowledgeable guide to Ethan Watters.';
 
-        // Build the full KB document
-        let fullDoc = knowledge || '';
-        if (pending) fullDoc += '\n\n--- RECENT ADDITIONS ---\n\n' + pending;
-        if (negative) fullDoc += '\n\n--- FALSE CLAIMS (never state these) ---\n\n' + negative;
+      // Grounding rule — appended to system prompt
+      system += `\n\n════════════════════════════════════════════════════
+GROUNDING RULE — ABSOLUTE
+════════════════════════════════════════════════════
+You will be given a VERIFIED RECORD containing everything known about Ethan Watters.
+Answer exclusively from that record. Every factual claim must come directly from it.
+Do not use your training data about Ethan Watters — it is unreliable.
+If something is not in the record, say it is not in your record. Do not guess or infer.
+════════════════════════════════════════════════════`;
 
-        // Get the last user message as the query
+      if (negative) {
+        system += `\n\nFALSE CLAIMS — never state or imply these:\n${negative}`;
+      }
+
+      body.system = system;
+
+      // ── INLINE RAG: keyword-based section retrieval ──────────────────
+      // Split KB into sections, score each against the query, pass top matches.
+      // No second API call — stays well within Cloudflare's 30s CPU limit.
+      if (knowledge || pending) {
         const messages = Array.isArray(body.messages) ? body.messages : [];
         const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
-        const query = typeof lastUserMsg?.content === 'string'
+        const query = (typeof lastUserMsg?.content === 'string'
           ? lastUserMsg.content
-          : (lastUserMsg?.content?.[0]?.text || '');
+          : (lastUserMsg?.content?.[0]?.text || '')).toLowerCase();
 
-        // ── STEP 1: RETRIEVAL ────────────────────────────────────────────
-        const retrievalResp = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 6000,
-            system: `You are a precise document retrieval system. Your only job is to extract relevant passages from a source document.
+        // Split KB into sections on double-newline boundaries
+        let fullDoc = (knowledge || '') + (pending ? '\n\n--- RECENT ADDITIONS ---\n\n' + pending : '');
+        const sections = fullDoc.split(/\n{2,}/);
 
-RULES:
-- Copy passages from the document VERBATIM. Do not paraphrase, summarize, or add anything.
-- Include every passage that is relevant to the query. Be generous — include context.
-- If the query asks about a topic, include ALL passages related to that topic.
-- If nothing is relevant, output exactly: NO_RELEVANT_PASSAGES
-- Do not add commentary, headers, or any text of your own. Only copied passages.`,
-            messages: [{
-              role: 'user',
-              content: `SOURCE DOCUMENT:\n\n${fullDoc}\n\n${'─'.repeat(60)}\n\nQUERY: ${query}\n\nCopy every passage from the source document that is relevant to this query. Verbatim only.`,
-            }],
-          }),
+        // Score each section: count query keyword hits
+        const queryWords = query
+          .replace(/[^\w\s]/g, ' ')
+          .split(/\s+/)
+          .filter(w => w.length > 3)
+          .filter(w => !['what', 'tell', 'about', 'does', 'have', 'list', 'with', 'that', 'this', 'from', 'were', 'them', 'they'].includes(w));
+
+        const scored = sections.map(section => {
+          const lower = section.toLowerCase();
+          let score = 0;
+          for (const word of queryWords) {
+            // Count occurrences
+            let idx = 0;
+            while ((idx = lower.indexOf(word, idx)) !== -1) { score++; idx++; }
+          }
+          return { section, score };
         });
 
-        const retrievalData = await retrievalResp.json();
-        // Surface retrieval errors clearly rather than silently falling through
-        if (!retrievalResp.ok || retrievalData.error) {
-          return json({ error: `Retrieval step failed: ${JSON.stringify(retrievalData.error || retrievalData)}` }, 502, origin);
+        // Always include: the header section + top scoring sections
+        // Sort by score, take top sections up to ~12000 chars
+        const topSections = scored
+          .filter(s => s.score > 0)
+          .sort((a, b) => b.score - a.score);
+
+        // If nothing scored, include the full doc (query may be too broad)
+        let retrieved;
+        if (topSections.length === 0) {
+          retrieved = fullDoc;
+        } else {
+          // Take top sections until we hit ~15000 chars
+          let combined = '';
+          for (const { section } of topSections) {
+            if (combined.length + section.length > 15000) break;
+            combined += section + '\n\n';
+          }
+          retrieved = combined.trim() || fullDoc;
         }
-        const passages = retrievalData?.content?.[0]?.text || 'NO_RELEVANT_PASSAGES';
 
-        // ── STEP 2: ANSWER ───────────────────────────────────────────────
-        const groundedSystem = (behavior || 'You are EthanExpert, a knowledgeable guide to Ethan Watters.') +
-          `\n\n════════════════════════════════════════════════════\nGROUNDING RULE — ABSOLUTE\n════════════════════════════════════════════════════\nYou have been given retrieved source passages. These are your ONLY factual source.\nEvery claim must be directly supported by the passages. If the passages do not contain a fact, do not state it.\nIf passages do not mention something, say it is not in your record.\nYour training data about Ethan Watters is NOT a valid source. The passages are ground truth.\n════════════════════════════════════════════════════`;
+        // Inject as grounded user turn before the conversation
+        const groundedTurn = {
+          role: 'user',
+          content: `VERIFIED RECORD — answer only from this:\n\n${retrieved}`,
+        };
+        const ackTurn = {
+          role: 'assistant',
+          content: 'I have read the verified record and will answer using only the facts it contains.',
+        };
 
-        body.system = groundedSystem;
+        // Rebuild messages: [grounded context] [ack] [prior history] [current question]
         body.messages = [
-          {
-            role: 'user',
-            content: `RETRIEVED PASSAGES — your only factual source:\n\n${passages}`,
-          },
-          {
-            role: 'assistant',
-            content: 'I have read the retrieved passages and will answer using only the facts they contain.',
-          },
-          ...messages.slice(0, -1),
-          lastUserMsg,
+          groundedTurn,
+          ackTurn,
+          ...messages,
         ].filter(Boolean);
       }
     }
-
 
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
