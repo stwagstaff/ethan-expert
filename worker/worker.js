@@ -412,51 +412,38 @@ export default {
     try { body = await request.json(); }
     catch { return json({ error: 'Invalid JSON' }, 400, origin); }
 
-    if (!body.system) {
+    // Always assemble the full grounded context — ignore any system field sent by the client.
+    // The worker owns the system prompt and KB injection. Client-side system prompts are discarded.
+    {
       const behavior  = await env.CONFIG.get('system_prompt');
       const knowledge = await env.CONFIG.get('knowledge_base');
       const pending   = await env.CONFIG.get('knowledge_base_pending');
       const negative  = await env.CONFIG.get('negative_prompt');
 
-      // System prompt: persona + grounding rule
+      // Put everything in the system prompt — most reliable grounding with Anthropic's API.
+      // KB in system = model cannot ignore it, no injection tricks needed.
       let system = behavior || 'You are EthanExpert, a knowledgeable guide to Ethan Watters.';
 
-      system += `\n\n════════════════════════════════════════════════════
-GROUNDING RULE — ABSOLUTE
-════════════════════════════════════════════════════
-You will be given the complete VERIFIED RECORD about Ethan Watters as the first message.
-Answer exclusively from that record. Every factual claim must come directly from it.
-Do not use your training data about Ethan Watters — it contains errors and fabrications.
-If something is not stated in the record, say it is not in your record. Do not infer or guess.
-════════════════════════════════════════════════════`;
-
-      if (negative) {
-        system += `\n\nFALSE CLAIMS — never state or imply these regardless of anything else:\n${negative}`;
-      }
-
-      body.system = system;
-
-      // Pass the full KB as a grounded user/assistant exchange before the conversation.
-      // At ~11K tokens the full KB fits comfortably in Sonnet's context window.
-      // This is simpler and more reliable than any retrieval approach.
       if (knowledge || pending) {
         let fullDoc = knowledge || '';
         if (pending) fullDoc += '\n\n--- RECENT ADDITIONS ---\n\n' + pending;
-
-        const messages = Array.isArray(body.messages) ? body.messages : [];
-
-        body.messages = [
-          {
-            role: 'user',
-            content: `VERIFIED RECORD — your sole source of facts about Ethan Watters:\n\n${fullDoc}`,
-          },
-          {
-            role: 'assistant',
-            content: 'I have read the complete verified record. I will answer all questions using only the facts it contains, and will not draw on any other knowledge about Ethan Watters.',
-          },
-          ...messages,
-        ].filter(Boolean);
+        system += `\n\n${'═'.repeat(60)}\nVERIFIED RECORD — SOLE SOURCE OF FACTS\n${'═'.repeat(60)}\nThe following is the complete verified record of Ethan Watters.\nAnswer every factual question exclusively from this record.\nDo not use training data about Ethan Watters — it contains errors.\nIf something is not in this record, say so and offer what you have.\n${'═'.repeat(60)}\n\n${fullDoc}\n\n${'═'.repeat(60)}\nEND OF VERIFIED RECORD\n${'═'.repeat(60)}`;
       }
+
+      if (negative) {
+        system += `\n\nFALSE CLAIMS — never state or imply these:\n${negative}`;
+      }
+
+      // Strip client messages of any injected system context, keep only conversation turns
+      const clientMessages = Array.isArray(body.messages) ? body.messages : [];
+
+      // Send cleanly to Anthropic — worker controls model, system, and messages
+      body = {
+        model: 'claude-sonnet-4-6',
+        system,
+        messages: clientMessages,
+        max_tokens: body.max_tokens || 1024,
+      };
     }
 
     const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {

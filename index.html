@@ -623,8 +623,6 @@ async function sendToAgent() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        system: systemPrompt + `\n\n[USER MODE: ${currentMode}]`,
         messages: history,
         max_tokens: 1500,
       }),
